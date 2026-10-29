@@ -24,6 +24,8 @@ jobs:
             args: "--target x86_64-apple-darwin"
             out: target/x86_64-apple-darwin/release/bundle
     runs-on: ${{ matrix.os }}
+    env:
+      CMAKE_POLICY_VERSION_MINIMUM: "3.5"
     steps:
       - uses: actions/checkout@v4
 
