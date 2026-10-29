@@ -1,31 +1,76 @@
 name: Build desktop apps
 
+# Every run builds Windows and Mac, publishes them as a new GitHub release and
+# updates latest.json, which every installed copy checks. Installed apps then
+# download the update in the background and offer a restart.
+#
+# Needs one repository secret: TAURI_SIGNING_PRIVATE_KEY (see README).
+
 on:
   workflow_dispatch:
-  push:
-    tags: ["v*"]
+    inputs:
+      notes:
+        description: "What's new (shown to users)"
+        required: false
+        default: "Improvements and fixes."
+
+permissions:
+  contents: write
+
+env:
+  CMAKE_POLICY_VERSION_MINIMUM: "3.5"
 
 jobs:
+  prep:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - id: v
+        run: echo "version=1.0.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+      - name: Check the signing key is set
+        env:
+          KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::error::Add the TAURI_SIGNING_PRIVATE_KEY secret first (Settings, Secrets and variables, Actions)."
+            exit 1
+          fi
+      - name: Create a draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NOTES: ${{ github.event.inputs.notes || 'Improvements and fixes.' }}
+        run: |
+          gh release create "v${{ steps.v.outputs.version }}" --repo "${{ github.repository }}" \
+            --draft --title "Theory Club ${{ steps.v.outputs.version }}" \
+            --notes "$NOTES" --target "${{ github.sha }}"
+
   build:
+    needs: prep
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - name: windows
             os: windows-latest
             args: "--features asio"
             out: target/release/bundle
+            tag: windows-x64
           - name: mac-apple-silicon
             os: macos-latest
             args: "--target aarch64-apple-darwin"
             out: target/aarch64-apple-darwin/release/bundle
+            tag: mac-arm64
           - name: mac-intel
             os: macos-latest
             args: "--target x86_64-apple-darwin"
             out: target/x86_64-apple-darwin/release/bundle
+            tag: mac-x64
     runs-on: ${{ matrix.os }}
     env:
-      CMAKE_POLICY_VERSION_MINIMUM: "3.5"
+      VERSION: ${{ needs.prep.outputs.version }}
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
 
@@ -49,26 +94,78 @@ jobs:
       - name: Tauri CLI
         run: npm install -g @tauri-apps/cli@2
 
+      - name: Stamp version and update address
+        shell: bash
+        run: node scripts/prepare-release.mjs "$VERSION" "${{ github.repository }}"
+
       - name: Engine tests
         run: cargo test -p tc-engine --release --lib
 
       - name: Build the app
         run: tauri build ${{ matrix.args }}
 
+      - name: Collect the files
+        shell: bash
+        run: |
+          set -e
+          mkdir dist
+          B="${{ matrix.out }}"
+          T="${{ matrix.tag }}"
+          if [ "${{ matrix.name }}" = "windows" ]; then
+            cp "$(ls "$B"/nsis/*-setup.exe | head -1)"     "dist/theory-club-$T-setup.exe"
+            cp "$(ls "$B"/nsis/*-setup.exe.sig | head -1)" "dist/theory-club-$T-setup.exe.sig"
+            cp "$(ls "$B"/msi/*.msi | head -1)"            "dist/theory-club-$T.msi"
+          else
+            cp "$(ls "$B"/macos/*.app.tar.gz | head -1)"     "dist/theory-club-$T.app.tar.gz"
+            cp "$(ls "$B"/macos/*.app.tar.gz.sig | head -1)" "dist/theory-club-$T.app.tar.gz.sig"
+            cp "$(ls "$B"/dmg/*.dmg | head -1)"              "dist/theory-club-$T.dmg"
+          fi
+          ls -la dist
+
+      - name: Add to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "v$VERSION" dist/* --clobber --repo "${{ github.repository }}"
+
       - uses: actions/upload-artifact@v4
         with:
           name: theory-club-${{ matrix.name }}
           path: |
-            ${{ matrix.out }}/msi/*.msi
-            ${{ matrix.out }}/nsis/*.exe
-            ${{ matrix.out }}/dmg/*.dmg
-          if-no-files-found: error
+            dist/*.exe
+            dist/*.msi
+            dist/*.dmg
 
-      - name: Attach to the release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+  publish:
+    needs: [prep, build]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.prep.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+      NOTES: ${{ github.event.inputs.notes || 'Improvements and fixes.' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          files: |
-            ${{ matrix.out }}/msi/*.msi
-            ${{ matrix.out }}/nsis/*.exe
-            ${{ matrix.out }}/dmg/*.dmg
+          node-version: 20
+      - name: Write latest.json and publish
+        run: |
+          set -e
+          mkdir rel && cd rel
+          gh release download "v$VERSION" --repo "${{ github.repository }}" --pattern "*.sig"
+          for s in *.sig; do touch "${s%.sig}"; done
+          node ../scripts/make-latest-json.mjs "$VERSION" \
+            "https://github.com/${{ github.repository }}/releases/download/v$VERSION" "$NOTES"
+          cat latest.json
+          gh release upload "v$VERSION" latest.json --clobber --repo "${{ github.repository }}"
+          gh release edit "v$VERSION" --draft=false --latest --repo "${{ github.repository }}"
+
+  cleanup:
+    # if a build fails, remove the half-made draft so nothing broken ships
+    needs: [prep, build]
+    if: failure() && needs.prep.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release delete "v${{ needs.prep.outputs.version }}" --yes --cleanup-tag --repo "${{ github.repository }}" || true
