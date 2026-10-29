@@ -1,0 +1,72 @@
+name: Build desktop apps
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows
+            os: windows-latest
+            args: "--features asio"
+            out: target/release/bundle
+          - name: mac-apple-silicon
+            os: macos-latest
+            args: "--target aarch64-apple-darwin"
+            out: target/aarch64-apple-darwin/release/bundle
+          - name: mac-intel
+            os: macos-latest
+            args: "--target x86_64-apple-darwin"
+            out: target/x86_64-apple-darwin/release/bundle
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ startsWith(matrix.os, 'macos') && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: LLVM for the ASIO bindings (Windows)
+        if: startsWith(matrix.os, 'windows')
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "C:\Program Files\LLVM\bin\libclang.dll")) { choco install llvm -y }
+          "LIBCLANG_PATH=C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Tauri CLI
+        run: npm install -g @tauri-apps/cli@2
+
+      - name: Engine tests
+        run: cargo test -p tc-engine --release --lib
+
+      - name: Build the app
+        run: tauri build ${{ matrix.args }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: theory-club-${{ matrix.name }}
+          path: |
+            ${{ matrix.out }}/msi/*.msi
+            ${{ matrix.out }}/nsis/*.exe
+            ${{ matrix.out }}/dmg/*.dmg
+          if-no-files-found: error
+
+      - name: Attach to the release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ matrix.out }}/msi/*.msi
+            ${{ matrix.out }}/nsis/*.exe
+            ${{ matrix.out }}/dmg/*.dmg
