@@ -9,6 +9,7 @@ pub mod band;
 pub mod clock;
 pub mod codec;
 pub mod net;
+pub mod rec;
 pub mod ring;
 
 use arc_swap::{ArcSwap, ArcSwapOption};
@@ -99,6 +100,8 @@ pub struct Shared {
     pub audio_err: Mutex<String>,
     pub frames_tx: SyncSender<InFrame>,
     pub sent: AtomicU64,
+    /// your own input by capture time, kept only while recording
+    pub self_ring: ArcSwapOption<PeerRing>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -165,6 +168,7 @@ pub struct Engine {
     gen: Arc<AtomicU64>,
     audio: Mutex<Option<audio::Running>>,
     codec: Mutex<(Codec, i32)>,
+    rec: Mutex<Option<rec::Recorder>>,
 }
 
 impl Engine {
@@ -191,8 +195,9 @@ impl Engine {
             audio_err: Mutex::new(String::new()),
             frames_tx: tx,
             sent: AtomicU64::new(0),
+            self_ring: ArcSwapOption::empty(),
         });
-        let e = Arc::new(Engine { sh, net: Arc::new(Mutex::new(None)), gen: Arc::new(AtomicU64::new(0)), audio: Mutex::new(None), codec: Mutex::new((Codec::Opus, 128_000)) });
+        let e = Arc::new(Engine { sh, net: Arc::new(Mutex::new(None)), gen: Arc::new(AtomicU64::new(0)), audio: Mutex::new(None), codec: Mutex::new((Codec::Opus, 128_000)), rec: Mutex::new(None) });
         let (sh, net) = (e.sh.clone(), e.net.clone());
         std::thread::Builder::new().name("tc-send".into()).spawn(move || sender_loop(sh, net, rx)).expect("thread");
         e
@@ -246,6 +251,29 @@ impl Engine {
         }
         Ok(())
     }
+    // ---- recording
+
+    /// Starts recording every player to WAV files in `dir`. `me` names your own track.
+    pub fn rec_start(&self, dir: &std::path::Path, me: &str) -> Result<(), String> {
+        let mut g = self.rec.lock();
+        if g.is_some() {
+            return Err("Already recording".into());
+        }
+        let net = self.net.clone();
+        let names: rec::Names = Box::new(move || {
+            net.lock().as_ref().map(|n| n.peers.values().filter(|p| p.state != PeerState::Left).map(|p| (p.slot, p.name.clone())).collect()).unwrap_or_default()
+        });
+        *g = Some(rec::Recorder::start(self.sh.clone(), dir, me, names)?);
+        Ok(())
+    }
+    pub fn rec_stop(&self) -> Result<rec::RecResult, String> {
+        let r = self.rec.lock().take().ok_or("Not recording")?;
+        r.stop()
+    }
+    pub fn rec_seconds(&self) -> Option<f64> {
+        self.rec.lock().as_ref().map(|r| r.seconds())
+    }
+
     pub fn shared_ms(&self) -> f64 {
         self.sh.clock.shared_ns() as f64 / 1e6
     }
@@ -492,6 +520,7 @@ impl Engine {
             "sent": sh.sent.load(Ordering::Relaxed),
             "public": g.as_ref().and_then(|n| n.public.map(|a| a.to_string())),
             "peers": peers,
+            "rec": self.rec.lock().as_ref().map(|r| r.seconds()),
         })
     }
 }
@@ -520,6 +549,9 @@ fn sender_loop(sh: Arc<Shared>, net: Arc<Mutex<Option<Net>>>, rx: Receiver<InFra
     let mut buf = [0u8; 1600];
     let mut payload = [0u8; 1400];
     while let Ok(f) = rx.recv() {
+        if let Some(r) = sh.self_ring.load_full() {
+            r.write(f.ts.div_euclid(FRAME as i64), &f.data);
+        }
         let mut g = net.lock();
         let n = match g.as_mut() {
             Some(n) => n,

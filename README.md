@@ -38,8 +38,35 @@ publishes a new release, numbered `1.0.<run number>`:
 | `theory-club-mac-arm64.dmg` | Macs with Apple silicon |
 | `theory-club-mac-x64.dmg` | Intel Macs |
 
-Share the **Releases** page (or `…/releases/latest`) with anyone who wants the
-app.
+Each release also has the web versions:
+
+| File | For |
+| --- | --- |
+| `theory-club-web.zip` | The web app as a website: upload the `theory-club` folder to Netlify or any host |
+| `theory-club-offline.html` | One file that opens in any browser, no install |
+
+### Download page
+
+The **Download page** workflow publishes a page at
+`https://<owner>.github.io/<repo>/` that people can share:
+
+* a big button for the visitor's own computer (Windows, Apple silicon or Intel
+  Mac, or the browser version on phones)
+* every download for every platform, with sizes
+* a version picker for older releases, with their notes
+* first-launch help for Mac and Windows
+* the browser version of the app at `…/app/`, installable on phones
+
+It reads the list of versions from your releases each time it loads, so new
+releases appear on it straight away. It rebuilds by itself when `web/`, `site/`
+or the script change on `main`, and after each desktop release.
+
+One-time setup: **Settings → Pages → Build and deployment → Source: GitHub
+Actions**. If your default branch isn't `main`, change it at the top of
+`.github/workflows/pages.yml`.
+
+To build the page and web files on your own machine:
+`node scripts/make-site.mjs 1.0.0 owner/repo` (needs `zip`).
 
 ### Automatic updates
 
@@ -170,6 +197,7 @@ engine/       Rust jam engine (no UI): audio I/O, codec, network, clock, band
   src/ring.rs    lock-free timestamped receive buffer
   src/band.rs    click, drums and bass synthesised in the audio callback
 src-tauri/    desktop shell (Tauri 2): engine commands, updater
-scripts/      release helpers (version stamping, latest.json)
+scripts/      release helpers (version stamping, latest.json, make-site.mjs)
+site/         download page, web app icons, manifest and offline cache
 web/          the Theory Club web app
 ```

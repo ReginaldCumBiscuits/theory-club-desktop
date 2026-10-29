@@ -1,0 +1,60 @@
+name: Download page
+
+# Publishes the download page and the browser version of the app on GitHub
+# Pages: https://<owner>.github.io/<repo>/ (download page) and …/app/ (the app).
+# Runs whenever the web app or the page changes on main, and after each
+# desktop release. The page reads the list of versions from GitHub releases
+# as it loads, so new releases appear without rebuilding it.
+#
+# One-time setup: Settings → Pages → Build and deployment → Source:
+# "GitHub Actions".
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "site/**"
+      - "scripts/make-site.mjs"
+      - ".github/workflows/pages.yml"
+  workflow_run:
+    workflows: ["Build desktop apps"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Version for the web app
+        id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v=$(gh release view --repo "${{ github.repository }}" --json tagName --jq .tagName 2>/dev/null || echo "web")
+          echo "version=${v#v}-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Build the page and the web app
+        run: node scripts/make-site.mjs "${{ steps.v.outputs.version }}" "${{ github.repository }}"
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4
