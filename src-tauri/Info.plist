@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Theory Club uses your audio interface or microphone so you can jam with friends and get feedback while you practise.</string>
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>Theory Club connects straight to the other players in your jam room, including ones on your local network.</string>
+</dict>
+</plist>

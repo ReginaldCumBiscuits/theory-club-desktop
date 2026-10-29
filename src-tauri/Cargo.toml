@@ -1,0 +1,22 @@
+[package]
+name = "theory-club"
+version = "1.0.0"
+description = "Theory Club: music theory, practice and low-latency online jamming"
+edition = "2021"
+
+[lib]
+name = "theory_club_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tc-engine = { path = "../engine" }
+
+[features]
+# Windows: build with Steinberg ASIO support (needs the ASIO SDK, see README)
+asio = ["tc-engine/asio"]
