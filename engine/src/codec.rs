@@ -1,8 +1,12 @@
 //! Audio codecs: Opus in its lowest-delay mode (5 ms frames), or raw 16-bit
 //! PCM for fast local networks where every millisecond counts.
+//!
+//! Opus comes from `unsafe-libopus`, libopus 1.3.1 translated to Rust, so the
+//! build needs no C compiler or CMake on any platform.
 
 use crate::ring::FRAME;
-use opus::{Application, Bitrate, Channels, Decoder, Encoder};
+use unsafe_libopus as op;
+use unsafe_libopus::opus_encoder_ctl;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -11,34 +15,66 @@ pub enum Codec {
     Pcm,
 }
 
+struct OpusEnc(*mut op::OpusEncoder);
+// The encoder is only ever used behind the engine's mutex.
+unsafe impl Send for OpusEnc {}
+impl Drop for OpusEnc {
+    fn drop(&mut self) {
+        unsafe { op::opus_encoder_destroy(self.0) }
+    }
+}
+
+struct OpusDec(*mut op::OpusDecoder);
+unsafe impl Send for OpusDec {}
+impl Drop for OpusDec {
+    fn drop(&mut self) {
+        unsafe { op::opus_decoder_destroy(self.0) }
+    }
+}
+
 pub struct Enc {
-    opus: Encoder,
+    opus: OpusEnc,
     pub codec: Codec,
 }
 
 impl Enc {
     pub fn new(codec: Codec, bitrate: i32) -> Result<Self, String> {
-        let mut opus = Encoder::new(48_000, Channels::Mono, Application::LowDelay).map_err(|e| e.to_string())?;
-        opus.set_bitrate(Bitrate::Bits(bitrate.clamp(32_000, 256_000))).map_err(|e| e.to_string())?;
-        let _ = opus.set_vbr(false);
-        Ok(Enc { opus, codec })
+        let mut err = 0i32;
+        let st = unsafe { op::opus_encoder_create(48_000, 1, op::OPUS_APPLICATION_RESTRICTED_LOWDELAY, &mut err) };
+        if st.is_null() || err != op::OPUS_OK {
+            return Err(format!("Opus encoder error {}", err));
+        }
+        let mut e = Enc { opus: OpusEnc(st), codec };
+        e.set_bitrate(bitrate);
+        unsafe {
+            opus_encoder_ctl!(st, op::OPUS_SET_VBR_REQUEST, 0i32);
+            opus_encoder_ctl!(st, op::OPUS_SET_COMPLEXITY_REQUEST, 8i32);
+        }
+        Ok(e)
     }
     /// Samples of codec delay: decoded audio is this much later than the input.
     pub fn lookahead(&mut self) -> u16 {
         match self.codec {
-            Codec::Opus => self.opus.get_lookahead().unwrap_or(120).clamp(0, 2000) as u16,
+            Codec::Opus => {
+                let mut v = 120i32;
+                unsafe { opus_encoder_ctl!(self.opus.0, op::OPUS_GET_LOOKAHEAD_REQUEST, &mut v) };
+                v.clamp(0, 2000) as u16
+            }
             Codec::Pcm => 0,
         }
     }
     pub fn set_bitrate(&mut self, b: i32) {
-        let _ = self.opus.set_bitrate(Bitrate::Bits(b.clamp(32_000, 256_000)));
+        unsafe { opus_encoder_ctl!(self.opus.0, op::OPUS_SET_BITRATE_REQUEST, b.clamp(32_000, 256_000)) };
     }
     /// Returns (codec byte, payload length) written to `out`.
     pub fn encode(&mut self, frame: &[f32], out: &mut [u8]) -> Result<(u8, usize), String> {
         match self.codec {
             Codec::Opus => {
-                let n = self.opus.encode_float(&frame[..FRAME], out).map_err(|e| e.to_string())?;
-                Ok((0, n))
+                let n = unsafe { op::opus_encode_float(self.opus.0, frame.as_ptr(), FRAME as i32, out.as_mut_ptr(), out.len().min(1275) as i32) };
+                if n < 0 {
+                    return Err(format!("Opus encode error {}", n));
+                }
+                Ok((0, n as usize))
             }
             Codec::Pcm => {
                 for (i, s) in frame[..FRAME].iter().enumerate() {
@@ -52,16 +88,24 @@ impl Enc {
 }
 
 pub struct Dec {
-    opus: Decoder,
+    opus: OpusDec,
 }
 
 impl Dec {
     pub fn new() -> Result<Self, String> {
-        Ok(Dec { opus: Decoder::new(48_000, Channels::Mono).map_err(|e| e.to_string())? })
+        let mut err = 0i32;
+        let st = unsafe { op::opus_decoder_create(48_000, 1, &mut err) };
+        if st.is_null() || err != op::OPUS_OK {
+            return Err(format!("Opus decoder error {}", err));
+        }
+        Ok(Dec { opus: OpusDec(st) })
     }
     pub fn decode(&mut self, codec: u8, data: &[u8], out: &mut [f32]) -> bool {
         match codec {
-            0 => matches!(self.opus.decode_float(data, &mut out[..FRAME], false), Ok(n) if n == FRAME),
+            0 if !data.is_empty() => {
+                let n = unsafe { op::opus_decode_float(self.opus.0, data.as_ptr(), data.len() as i32, out.as_mut_ptr(), FRAME as i32, 0) };
+                n == FRAME as i32
+            }
             1 if data.len() >= FRAME * 2 => {
                 for (i, o) in out[..FRAME].iter_mut().enumerate() {
                     *o = i16::from_le_bytes([data[i * 2], data[i * 2 + 1]]) as f32 / 32768.0;
@@ -73,7 +117,8 @@ impl Dec {
     }
     /// Packet loss concealment for one missing frame.
     pub fn conceal(&mut self, out: &mut [f32]) -> bool {
-        matches!(self.opus.decode_float(&[], &mut out[..FRAME], false), Ok(n) if n == FRAME)
+        let n = unsafe { op::opus_decode_float(self.opus.0, std::ptr::null(), 0, out.as_mut_ptr(), FRAME as i32, 0) };
+        n == FRAME as i32
     }
 }
 

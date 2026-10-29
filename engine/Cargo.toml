@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 cpal = "0.18"
-opus = "0.3"
+unsafe-libopus = "0.2"
 arc-swap = "1"
 rtrb = "0.3"
 serde = { version = "1", features = ["derive"] }
