@@ -1,0 +1,6 @@
+target/
+src-tauri/gen/
+node_modules/
+_site/
+release-web/
+_zip/

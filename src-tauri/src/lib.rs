@@ -127,6 +127,38 @@ fn net_close(e: State<Eng>) {
     e.0.net_close()
 }
 
+/// Starts recording the jam: one WAV per player in Music/Theory Club jams/<folder>.
+#[tauri::command]
+fn rec_start(app: tauri::AppHandle, e: State<Eng>, folder: String, me: String) -> Result<String, String> {
+    use tauri::Manager;
+    let base = app.path().audio_dir().or_else(|_| app.path().document_dir()).or_else(|_| app.path().home_dir()).map_err(|x| x.to_string())?;
+    let safe: String = folder.chars().map(|c| if c.is_alphanumeric() || " -_".contains(c) { c } else { '-' }).collect();
+    let dir = base.join("Theory Club jams").join(if safe.trim().is_empty() { "Jam".to_string() } else { safe.trim().to_string() });
+    e.0.rec_start(&dir, &me)?;
+    Ok(dir.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+fn rec_stop(e: State<Eng>) -> Result<tc_engine::rec::RecResult, String> {
+    e.0.rec_stop()
+}
+
+/// Shows a recording folder in Finder / Explorer.
+#[tauri::command]
+fn rec_open(path: String) -> Result<(), String> {
+    let p = std::path::PathBuf::from(&path);
+    if !p.exists() || !p.to_string_lossy().contains("Theory Club jams") {
+        return Err("That folder isn't there any more".into());
+    }
+    #[cfg(target_os = "macos")]
+    let r = std::process::Command::new("open").arg(&p).spawn();
+    #[cfg(target_os = "windows")]
+    let r = std::process::Command::new("explorer").arg(&p).spawn();
+    #[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
+    let r = std::process::Command::new("xdg-open").arg(&p).spawn();
+    r.map(|_| ()).map_err(|x| x.to_string())
+}
+
 #[tauri::command]
 fn shared_ms(e: State<Eng>) -> f64 {
     e.0.shared_ms()
@@ -183,6 +215,10 @@ window.onerror = (m) => window.__TAURI__ && window.__TAURI__.core.invoke('selfte
     out.notes.push('audio ' + JSON.stringify(info));
     await I('engine_set_session', {sess: tc.natSess({mode: 'sync', bars: 1, bpm: 120, beats: 4, style: 'rock', key: 'A', playing: true, t0: (await I('shared_ms')) + 300})});
     await new Promise(r => setTimeout(r, 1500));
+    const recDir = await t('rec_start', 'rec_start', {folder: 'selftest', me: 'Me'});
+    await new Promise(r => setTimeout(r, 1500));
+    const rr = await t('rec_stop', 'rec_stop');
+    if (!rr || !rr.files || rr.files.length < 2 || !(rr.seconds > 0.3)) { out.fail++; out.notes.push('recording empty ' + JSON.stringify(rr)); } else out.notes.push('recorded ' + rr.seconds.toFixed(2) + ' s into ' + rr.dir);
     const s2 = await I('stats');
     if (!s2.audio || !(s2.out_level > 0.01)) { out.fail++; out.notes.push('audio not running ' + JSON.stringify(s2).slice(0, 200)); } else { out.pass++; out.notes.push('band playing, out level ' + s2.out_level.toFixed(2) + ', buffer ' + s2.buffer + ' @ ' + s2.rate); }
   }
@@ -222,6 +258,9 @@ pub fn run() {
             net_close,
             shared_ms,
             stats,
+            rec_start,
+            rec_stop,
+            rec_open,
             update_check,
             update_install,
             app_version,

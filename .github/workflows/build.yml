@@ -1,7 +1,8 @@
 name: Build desktop apps
 
-# Every run builds Windows and Mac, publishes them as a new GitHub release and
-# updates latest.json, which every installed copy checks. Installed apps then
+# Every run builds Windows and Mac, publishes them as a new GitHub release
+# (with the web versions alongside) and updates latest.json, which every
+# installed copy checks. Installed apps then
 # download the update in the background and offer a restart.
 #
 # Needs one repository secret: TAURI_SIGNING_PRIVATE_KEY (see README).
@@ -158,6 +159,10 @@ jobs:
             "https://github.com/${{ github.repository }}/releases/download/v$VERSION" "$NOTES"
           cat latest.json
           gh release upload "v$VERSION" latest.json --clobber --repo "${{ github.repository }}"
+          cd ..
+          # the web versions: a site to host anywhere, and one offline file
+          node scripts/make-site.mjs "$VERSION" "${{ github.repository }}"
+          gh release upload "v$VERSION" release-web/theory-club-web.zip release-web/theory-club-offline.html --clobber --repo "${{ github.repository }}"
           gh release edit "v$VERSION" --draft=false --latest --repo "${{ github.repository }}"
 
   cleanup:

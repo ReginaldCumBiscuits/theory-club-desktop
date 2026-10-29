@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Download Theory Club</title>
+<meta name="description" content="Download Theory Club for Windows or Mac, or use it in your browser.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>
+:root{--paper:#F2F2F7;--surface:#FFFFFF;--ink:#16181D;--muted:#5A5F6B;--line:#DADCE3;--accent:#2742C4;--accent-soft:#E6EBFB;--good:#1D7F47;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--paper:#0E1014;--surface:#191C22;--ink:#ECEDE8;--muted:#9CA1AD;--line:#2E323C;--accent:#8198FF;--accent-soft:#1E2540;--good:#5BC98A;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
+a{color:var(--accent)}
+.wrap{max-width:920px;margin:0 auto;padding:40px 16px 64px}
+header{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+header img{width:44px;height:44px;border-radius:11px}
+header b{font-size:20px}
+h1{font-size:clamp(30px,5vw,42px);line-height:1.1;margin:0 0 10px;letter-spacing:-.02em}
+.lede{color:var(--muted);font-size:17px;margin:0 0 26px;max-width:620px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px}
+.hero{display:flex;flex-wrap:wrap;gap:18px;align-items:center;justify-content:space-between}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.ver{font-size:22px;font-weight:700;margin:2px 0}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 18px;border-radius:12px;font-weight:600;text-decoration:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;font-size:15px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn small{font-weight:500;opacity:.8}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.hint{color:var(--muted);font-size:13.5px}
+h2{font-size:20px;margin:36px 0 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.card{display:flex;flex-direction:column;gap:8px}
+.card h3{margin:0;font-size:17px}
+.card .files{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.file{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:var(--paper);text-decoration:none;color:var(--ink);font-weight:600;font-size:14px}
+.file span{color:var(--muted);font-weight:500;font-size:12.5px;white-space:nowrap}
+.file.missing{opacity:.5;pointer-events:none}
+.notes{white-space:pre-wrap;font-size:14px;margin:6px 0 0;color:var(--ink)}
+select{font:inherit;padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);max-width:100%}
+details{margin-top:10px}summary{cursor:pointer;font-weight:600}
+.help li{margin:6px 0}.help h3{margin:0 0 4px;font-size:17px}.help ul{margin:0;padding-left:20px}
+footer{margin-top:40px;color:var(--muted);font-size:13px}
+.err{background:var(--accent-soft);border-radius:12px;padding:12px 14px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+ <header><img src="favicon.svg" alt=""><b>Theory Club</b></header>
+ <h1>Download Theory Club</h1>
+ <p class="lede">Music theory, songs, licks and play-along practice for guitar, bass, piano, drums and voice. Get the app for your computer, or use it straight away in your browser.</p>
+
+ <section class="panel hero" aria-labelledby="latest">
+  <div><span class="eyebrow">Latest version</span><div class="ver" id="latest">Theory Club</div><div class="hint" id="latestdate"></div></div>
+  <div class="row" id="primary"></div>
+ </section>
+ <p class="hint" id="primaryhint"></p>
+
+ <h2>All downloads</h2>
+ <div class="row" style="margin-bottom:12px"><label class="hint" for="pick">Version</label><select id="pick" aria-label="Choose a version"></select><span class="hint" id="pickhint"></span></div>
+ <div class="grid" id="grid"></div>
+ <section class="panel" style="margin-top:12px" id="notesbox" hidden><span class="eyebrow">What’s new in <span id="notesver"></span></span><p class="notes" id="notes"></p></section>
+ <div class="err" id="err" hidden></div>
+
+ <h2>First time opening it</h2>
+ <div class="grid">
+  <section class="panel help"><h3>Mac</h3><ul>
+   <li>Not sure which Mac you have? Apple menu → <b>About This Mac</b>. If it says <b>Chip: Apple M…</b>, choose Apple silicon. If it says <b>Processor: Intel</b>, choose Intel.</li>
+   <li>Open the .dmg and drag Theory Club into Applications.</li>
+   <li>The first time, right-click the app in Applications, choose <b>Open</b>, then <b>Open</b> again.</li>
+   <li>If macOS says the app is damaged, run <code>xattr -cr "/Applications/Theory Club.app"</code> in Terminal once.</li></ul></section>
+  <section class="panel help"><h3>Windows</h3><ul>
+   <li>The <b>installer (.exe)</b> is the easy choice. The <b>.msi</b> is for schools and offices that deploy software.</li>
+   <li>If SmartScreen warns about an unknown publisher, choose <b>More info → Run anyway</b>.</li>
+   <li>When you first join a jam room, allow Theory Club through Windows Firewall.</li></ul></section>
+  <section class="panel help"><h3>Browser and phone</h3><ul>
+   <li><b>Use it in your browser</b> works on any computer, tablet or phone.</li>
+   <li>On iPhone or iPad, tap Share → <b>Add to Home Screen</b> to install it as an app. On Android, use the browser menu → <b>Install app</b>.</li>
+   <li>The <b>offline file</b> opens in any browser with no internet needed (importing Guitar Pro files still needs a connection).</li></ul></section>
+ </div>
+ <p class="hint" style="margin-top:14px">Installed desktop apps update themselves. Your progress is saved on each device; to move it, open Progress in the app and copy your progress code.</p>
+
+ <footer><a id="allrel" href="#">All releases on GitHub</a> · <a id="src" href="#">Source code</a></footer>
+</div>
+<script>
+const REPO='__REPO__'.includes('__')?(location.hostname.endsWith('github.io')?location.hostname.split('.')[0]+'/'+location.pathname.split('/')[1]:''):'__REPO__';
+const GH='https://github.com/'+REPO;
+document.getElementById('allrel').href=GH+'/releases';document.getElementById('src').href=GH;
+const PLAT=[
+ {k:'win',name:'Windows',sub:'Windows 10 and 11, with ASIO support',files:[['theory-club-windows-x64-setup.exe','Installer (.exe)'],['theory-club-windows-x64.msi','MSI package']]},
+ {k:'arm',name:'Mac with Apple silicon',sub:'M1, M2, M3, M4 and newer',files:[['theory-club-mac-arm64.dmg','Disk image (.dmg)']]},
+ {k:'x64',name:'Mac with Intel',sub:'Older Intel Macs',files:[['theory-club-mac-x64.dmg','Disk image (.dmg)']]},
+ {k:'web',name:'Web',sub:'Any browser, phone or tablet',files:[['app/','Use it in your browser',true],['theory-club-web.zip','Website files for Netlify or any host'],['theory-club-offline.html','Offline file (.html)']]}];
+const $=id=>document.getElementById(id);
+const mb=n=>n?(n/1048576).toFixed(n>1048576*10?0:1)+' MB':'';
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function detect(){const ua=navigator.userAgent;let os='other',arch='';
+ if(/Windows/.test(ua))os='win';else if(/iPhone|iPad|Android/.test(ua))os='mobile';else if(/Mac/.test(ua))os=navigator.maxTouchPoints>1?'mobile':'mac';
+ if(os==='mac'&&navigator.userAgentData&&navigator.userAgentData.getHighEntropyValues){try{const h=await navigator.userAgentData.getHighEntropyValues(['architecture']);arch=h.architecture==='arm'?'arm':h.architecture==='x86'?'x64':''}catch(e){}}
+ return{os,arch}}
+function url(rel,f){return f.endsWith('/')?f:(rel?rel.base+f:GH+'/releases/latest/download/'+f)}
+function showPrimary(d){const p=$('primary'),h=$('primaryhint');const L=(f,label,cls='primary')=>`<a class="btn ${cls}" href="${url(null,f)}">${label}</a>`;
+ if(d.os==='win'){p.innerHTML=L('theory-club-windows-x64-setup.exe','Download for Windows')+L('app/','Use in browser','');h.textContent=''}
+ else if(d.os==='mac'&&d.arch){p.innerHTML=L(d.arch==='arm'?'theory-club-mac-arm64.dmg':'theory-club-mac-x64.dmg','Download for Mac')+L('app/','Use in browser','');h.textContent=d.arch==='arm'?'For Macs with Apple silicon.':'For Intel Macs.'}
+ else if(d.os==='mac'){p.innerHTML=L('theory-club-mac-arm64.dmg','Mac with Apple silicon')+L('theory-club-mac-x64.dmg','Mac with Intel','')+L('app/','Use in browser','');h.innerHTML='Not sure which Mac you have? Apple menu → About This Mac. “Chip: Apple M…” means Apple silicon.'}
+ else{p.innerHTML=L('app/','Open in your browser')+(d.os==='mobile'?'':L('theory-club-windows-x64-setup.exe','Windows','')+L('theory-club-mac-arm64.dmg','Mac',''));h.textContent=d.os==='mobile'?'Then add it to your home screen to use it like an app.':''}}
+function showRelease(rel){const have={};(rel&&rel.assets||[]).forEach(a=>have[a.name]=a.size);
+ $('grid').innerHTML=PLAT.map(P=>`<section class="panel card"><h3>${P.name}</h3><span class="hint">${P.sub}</span><div class="files">${P.files.map(([f,label,always])=>{const ok=always?(!rel||rel.latest):(!rel||f in have);const href=always?f:url(rel,f);return`<a class="file ${ok?'':'missing'}" href="${ok?href:'#'}" ${ok&&!always?'download':''}>${esc(label)}<span>${always?(rel&&!rel.latest?'latest only':'opens now'):ok?mb(have[f])||'download':'not in this version'}</span></a>`}).join('')}</div></section>`).join('');
+ if(rel){$('notesbox').hidden=false;$('notesver').textContent=rel.v;$('notes').textContent=rel.notes||'Improvements and fixes.'}}
+(async()=>{const d=await detect();showPrimary(d);showRelease(null);
+ if(!REPO){$('err').hidden=false;$('err').textContent='This page doesn’t know which GitHub repository to use.';return}
+ try{const r=await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=40`,{headers:{Accept:'application/vnd.github+json'}});if(!r.ok)throw new Error(r.status);
+  const list=(await r.json()).filter(x=>!x.draft&&!x.prerelease).map((x,i)=>({v:x.tag_name.replace(/^v/,''),date:x.published_at,notes:x.body,assets:x.assets,base:`${GH}/releases/download/${x.tag_name}/`,latest:i===0}));
+  if(!list.length){$('latest').textContent='No releases yet';return}
+  const L=list[0];$('latest').textContent='Theory Club '+L.v;$('latestdate').textContent='Released '+new Date(L.date).toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric'});
+  $('pick').innerHTML=list.map((x,i)=>`<option value="${i}">${esc(x.v)}${i===0?' (latest)':''} · ${new Date(x.date).toLocaleDateString()}</option>`).join('');
+  $('pick').onchange=e=>{const x=list[+e.target.value];showRelease(x);$('pickhint').textContent=x.latest?'':'Heads up: the desktop app updates itself to the newest version when it starts. The web files stay as they are.'};
+  showRelease(L)}
+ catch(e){$('err').hidden=false;$('err').innerHTML=`Couldn’t load the list of versions just now. The buttons above still download the latest version, and every version is on <a href="${GH}/releases">the releases page</a>.`;$('pick').innerHTML='<option>Latest</option>'}})();
+</script>
+</body>
+</html>
