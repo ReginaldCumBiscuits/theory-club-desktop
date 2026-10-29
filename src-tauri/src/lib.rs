@@ -1,7 +1,7 @@
 //! Desktop shell: the Theory Club web app plus the native jam engine,
 //! exposed to the page as Tauri commands.
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tauri::State;
 use tc_engine::audio::{AudioCfg, AudioInfo, DevList, HostInfo};
 use tc_engine::band::{LocalMix, Session};
@@ -9,6 +9,55 @@ use tc_engine::codec::Codec;
 use tc_engine::{Engine, NetInfo};
 
 struct Eng(Arc<Engine>);
+
+/// An update that has been downloaded and verified, waiting for a restart.
+#[derive(Default)]
+struct Pending(Mutex<Option<(tauri_plugin_updater::Update, Vec<u8>)>>);
+
+#[derive(serde::Serialize)]
+struct UpdateInfo {
+    current: String,
+    version: String,
+    notes: Option<String>,
+}
+
+/// Checks for a newer version and downloads it in the background.
+/// Returns the new version once it's ready to install, or None if up to date.
+#[tauri::command]
+async fn update_check(app: tauri::AppHandle, pending: State<'_, Pending>) -> Result<Option<UpdateInfo>, String> {
+    use tauri_plugin_updater::UpdaterExt;
+    if let Some((u, _)) = pending.0.lock().unwrap().as_ref() {
+        return Ok(Some(UpdateInfo { current: u.current_version.clone(), version: u.version.clone(), notes: u.body.clone() }));
+    }
+    #[allow(unused_mut)]
+    let mut b = app.updater_builder();
+    #[cfg(debug_assertions)]
+    if let Ok(u) = std::env::var("TC_UPDATE_URL") {
+        b = b.endpoints(vec![u.parse().map_err(|e: url::ParseError| e.to_string())?]).map_err(|e| e.to_string())?;
+    }
+    let up = b.build().map_err(|e| e.to_string())?;
+    let Some(u) = up.check().await.map_err(|e| e.to_string())? else { return Ok(None) };
+    // download (the signature is verified here; a tampered file is rejected)
+    let bytes = u.download(|_, _| {}, || {}).await.map_err(|e| e.to_string())?;
+    let info = UpdateInfo { current: u.current_version.clone(), version: u.version.clone(), notes: u.body.clone() };
+    *pending.0.lock().unwrap() = Some((u, bytes));
+    Ok(Some(info))
+}
+
+/// Installs the downloaded update and restarts the app.
+#[tauri::command]
+fn update_install(app: tauri::AppHandle, pending: State<'_, Pending>, eng: State<'_, Eng>) -> Result<(), String> {
+    let Some((u, bytes)) = pending.0.lock().unwrap().take() else { return Err("No update is ready".into()) };
+    eng.0.net_close();
+    eng.0.stop_audio();
+    u.install(bytes).map_err(|e| e.to_string())?;
+    app.restart();
+}
+
+#[tauri::command]
+fn app_version(app: tauri::AppHandle) -> String {
+    app.package_info().version.to_string()
+}
 
 #[tauri::command]
 fn engine_hosts(e: State<Eng>) -> Vec<HostInfo> {
@@ -138,6 +187,11 @@ window.onerror = (m) => window.__TAURI__ && window.__TAURI__.core.invoke('selfte
     if (!s2.audio || !(s2.out_level > 0.01)) { out.fail++; out.notes.push('audio not running ' + JSON.stringify(s2).slice(0, 200)); } else { out.pass++; out.notes.push('band playing, out level ' + s2.out_level.toFixed(2) + ', buffer ' + s2.buffer + ' @ ' + s2.rate); }
   }
   await t('stop', 'engine_stop');
+  if (window.__updExpect) {
+    const u = await t('update_check', 'update_check', {}, window.__updExpect === 'error');
+    if (window.__updExpect !== 'error') { if (!u || u.version !== window.__updExpect) { out.fail++; out.notes.push('update not offered: ' + JSON.stringify(u)); } else out.notes.push('update ready ' + u.current + ' -> ' + u.version); }
+  }
+  await t('app_version', 'app_version');
   const page = !!(document.querySelector('#main') && window.__tc && window.__tc.JO);
   if (!page) { out.fail++; out.notes.push('page did not load'); } else out.pass++;
   await I('selftest_report', {text: JSON.stringify(out)});
@@ -148,7 +202,10 @@ window.onerror = (m) => window.__TAURI__ && window.__TAURI__.core.invoke('selfte
 pub fn run() {
     let engine = Engine::new();
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .manage(Eng(engine))
+        .manage(Pending::default())
         .invoke_handler(tauri::generate_handler![
             engine_hosts,
             engine_devices,
@@ -165,6 +222,9 @@ pub fn run() {
             net_close,
             shared_ms,
             stats,
+            update_check,
+            update_install,
+            app_version,
             selftest_report,
             selftest_log
         ])
@@ -174,6 +234,9 @@ pub fn run() {
                 if let Some(w) = app.get_webview_window("main") {
                     std::thread::spawn(move || {
                         std::thread::sleep(std::time::Duration::from_secs(3));
+                        if let Ok(x) = std::env::var("TC_SELFTEST_UPDATE") {
+                            let _ = w.eval(format!("window.__updExpect = {:?};", x));
+                        }
                         let r = w.eval(SELFTEST_JS);
                         eprintln!("selftest: started ({})", r.is_ok());
                     });

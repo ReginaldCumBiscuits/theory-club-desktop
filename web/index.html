@@ -820,6 +820,11 @@ details.more[open]{display:flex;flex-direction:column;gap:inherit}
 .jbeat i.on{background:var(--accent)}
 .nrow{gap:10px;flex-wrap:wrap;align-items:flex-end}
 .nrow select{max-width:220px}
+
+/* v27 desktop updates */
+.updbar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:250;display:flex;gap:10px;align-items:center;flex-wrap:wrap;max-width:min(680px,calc(100vw - 32px));padding:10px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--line);box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.updbar span{flex:1 1 220px;font-size:.9rem}
+@media (max-width:700px){.updbar{bottom:76px}}
 </style>
 
 <nav class="sidebar" id="sidebar" aria-label="Theory Club"></nav><div class="scrim" id="scrim" hidden></div>
@@ -4739,7 +4744,32 @@ function natBind(){const el=JO.el,$=q=>el.querySelector(q);if(!$('#nhost'))retur
   if(JO.sess&&JO.sess.mode==='sync')return`Locked ${n.bars||'–'} bar${n.bars>1?'s':''} behind · ${net==null?'–':net} ms network${via}`;return`${n.delay_ms!=null?Math.round(n.delay_ms):'–'} ms behind you${via}`}}
 {const _q=joQual;joQual=function(P){if(!P.native)return _q(P);const n=P.nat;if(!n||n.state==='punching')return'';if(n.state==='lost')return'warn';if(n.loss>.03)return'warn';if(JO.sess&&JO.sess.mode==='live'){const d=n.delay_ms||99;return d<30?'good':d<50?'ok':'warn'}return n.state==='relay'?'ok':'good'}}
 
-window.__tc={JO,joLnow,natSess,TAB_EX,makeZip,midiFile,gtrVoice,drumVary,percHits,DKITS,drum,PLAYDB,TECH,PD,studyEx,pdEx,parseAsciiTab,scoreToEx,drumChart,topicPool,ksBuf,pianoBuf,detectPitch,audio:()=>audio(),AC:()=>AC,MASTER:()=>MASTER,tone:(...a)=>tone(...a)};
+
+/* ---------- desktop app updates ---------- */
+const UPD={state:'idle',info:null,err:'',ver:'',dismissed:false,last:0};
+function updBanner(){let b=document.getElementById('updbar');if(UPD.state!=='ready'||UPD.dismissed){if(b)b.remove();return}
+ if(!b){b=document.createElement('div');b.id='updbar';b.className='updbar';b.setAttribute('role','status');document.body.appendChild(b)}
+ const jam=JO.status==='in';
+ b.innerHTML=`<span><b>Theory Club ${esc(UPD.info.version)} is ready.</b> ${jam?'It will install when you restart, so finish your jam first.':'Restart to start using it.'}</span><button class="btn small primary" id="updgo">${jam?'Leave jam and restart':'Restart now'}</button><button class="btn small" id="updlater">Later</button>`;
+ b.querySelector('#updgo').onclick=updInstall;b.querySelector('#updlater').onclick=()=>{UPD.dismissed=true;updBanner()}}
+async function updCheck(manual){if(!NAT||UPD.state==='checking'||UPD.state==='ready')return;UPD.state='checking';UPD.err='';updSettings();
+ try{const r=await natCall('update_check');UPD.last=Date.now();if(r){UPD.info=r;UPD.state='ready';UPD.dismissed=false}else UPD.state='current'}
+ catch(e){UPD.state='error';UPD.err=String(e)}updBanner();updSettings()}
+async function updInstall(){if(UPD.state!=='ready')return;try{if(JO.status==='in')joLeave(true)}catch(e){}UPD.state='installing';updBanner();updSettings();
+ try{await natCall('update_install')}catch(e){UPD.state='error';UPD.err=String(e);updSettings()}}
+function updSettings(){const body=document.getElementById('setbody');if(!NAT||!body||document.getElementById('setpanel').hidden)return;let el=body.querySelector('#updset');
+ if(!el){el=document.createElement('section');el.id='updset';el.className='panel';body.appendChild(el)}
+ const msg={idle:'',checking:'Checking…',current:'You have the latest version.',ready:`Version ${UPD.info&&esc(UPD.info.version)} is downloaded and ready.`,installing:'Installing…',error:'Couldn’t check for updates. You might be offline.'}[UPD.state]||'';
+ el.innerHTML=`<h3>App updates</h3><p class="hint">Theory Club ${esc(UPD.ver||'')} for desktop. New versions download in the background and install when you restart.</p>
+  <div class="row" style="gap:10px;align-items:center">${UPD.state==='ready'?'<button class="btn primary" id="updnow">Restart and update</button>':`<button class="btn" id="updchk" ${UPD.state==='checking'?'disabled':''}>Check for updates</button>`}<span class="hint">${msg}</span></div>`;
+ const a=el.querySelector('#updchk');if(a)a.onclick=()=>updCheck(true);const g=el.querySelector('#updnow');if(g)g.onclick=updInstall}
+if(NAT){natCall('app_version').then(v=>{UPD.ver=v}).catch(()=>{});
+ setTimeout(()=>updCheck(false),8000);setInterval(()=>{if(Date.now()-UPD.last>6*3600e3)updCheck(false)},15*60e3);
+ {const _os=openSettings;openSettings=function(){_os();updSettings()}}
+ const sb=document.getElementById('setbody');if(sb&&window.MutationObserver)new MutationObserver(()=>{if(!sb.querySelector('#updset'))updSettings()}).observe(sb,{childList:true});
+ {const _lv=joLeave;joLeave=function(q){_lv(q);updBanner()}}}
+
+window.__tc={JO,joLnow,natSess,UPD,TAB_EX,makeZip,midiFile,gtrVoice,drumVary,percHits,DKITS,drum,PLAYDB,TECH,PD,studyEx,pdEx,parseAsciiTab,scoreToEx,drumChart,topicPool,ksBuf,pianoBuf,detectPitch,audio:()=>audio(),AC:()=>AC,MASTER:()=>MASTER,tone:(...a)=>tone(...a)};
 /* ---------- router ---------- */
 function route(){stopSeq();stopLoop();stopDemo();QUIZ=null;clearInterval(WU_T);focusOff();const h=location.hash.slice(1)||'home';const tab=h.startsWith('learn')?'learn':h.startsWith('tools')?'tools':h==='progress'?'plan':['practice','plan'].includes(h)?h:'daily';
  renderChrome(h);

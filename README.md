@@ -27,18 +27,47 @@ The interface is the same Theory Club web app (`web/index.html`). When it runs
 inside the desktop app, Jam online switches to the native engine. Everything
 else in the app works as it does on the website.
 
-## Download
+## Download and updates
 
-Every push of a version tag (`v1.0.0` and so on), or a manual run of the
-**Build desktop apps** workflow, builds:
+Each run of the **Build desktop apps** workflow (Actions → Run workflow)
+publishes a new release, numbered `1.0.<run number>`:
 
 | File | For |
 | --- | --- |
-| `Theory Club_x.y.z_x64_en-US.msi` / `..._x64-setup.exe` | Windows 10/11, with ASIO |
-| `Theory Club_x.y.z_aarch64.dmg` | Macs with Apple silicon |
-| `Theory Club_x.y.z_x64.dmg` | Intel Macs |
+| `theory-club-windows-x64-setup.exe` / `.msi` | Windows 10/11, with ASIO |
+| `theory-club-mac-arm64.dmg` | Macs with Apple silicon |
+| `theory-club-mac-x64.dmg` | Intel Macs |
 
-Get them from the run's **Artifacts**, or from the release when you push a tag.
+Share the **Releases** page (or `…/releases/latest`) with anyone who wants the
+app.
+
+### Automatic updates
+
+Installed apps check `latest.json` on the newest release when they start, and
+every 6 hours after that. They download a new version in the background,
+check its signature and show **Restart now / Later**. The update installs
+when the player restarts, so it never interrupts a jam. Settings → App updates
+shows the version and has a **Check for updates** button.
+
+Shipping an update is just running the workflow again. The text you type in
+"What's new" becomes the release notes.
+
+Requirements:
+
+* **Signing key.** Updates are signed, and the apps only install updates
+  signed with your key. Put the private key in the repository secret
+  `TAURI_SIGNING_PRIVATE_KEY` (Settings → Secrets and variables → Actions). The
+  matching public key is in `src-tauri/tauri.conf.json`. Keep the private key
+  safe: if it's lost, installed apps can't update until people reinstall.
+* **Public repository.** Apps download updates from your GitHub releases
+  without signing in, so the repository must be public. To keep the code
+  private, publish releases from a separate public repository instead.
+* Copies installed before updates were added (1.0.0) can't update
+  themselves. Install the next release by hand once; after that every update
+  is automatic.
+
+To make a new signing key: `tauri signer generate -w theory-club.key`. Put the
+`.pub` contents in `plugins.updater.pubkey`, and the private key in the secret.
 
 **First launch on a Mac:** the app is ad-hoc signed, not notarised. Right-click
 the app in Applications, choose **Open**, then **Open** again. If macOS says the
@@ -140,6 +169,7 @@ engine/       Rust jam engine (no UI): audio I/O, codec, network, clock, band
   src/lib.rs     Engine API, hole punching, relay, clock sync, delay control
   src/ring.rs    lock-free timestamped receive buffer
   src/band.rs    click, drums and bass synthesised in the audio callback
-src-tauri/    desktop shell (Tauri 2) exposing the engine to the page
+src-tauri/    desktop shell (Tauri 2): engine commands, updater
+scripts/      release helpers (version stamping, latest.json)
 web/          the Theory Club web app
 ```
