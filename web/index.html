@@ -1085,6 +1085,7 @@ main nav.secnav.pills{display:flex;flex-wrap:nowrap;overflow-x:auto;width:auto;m
 .tourc{gap:12px;flex-wrap:wrap;margin-bottom:14px}
 .clefpair{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}.clefpair .clefbox{display:flex;flex-direction:column;gap:2px}.clefpair.sm svg{max-width:120px;height:auto}.cletters{display:flex;flex-wrap:wrap;gap:6px}.cletters .btn{min-width:42px}.cletters .btn.good{background:var(--good);color:#fff;border-color:var(--good)}.cletters .btn.bad{background:var(--bad);color:#fff;border-color:var(--bad)}
 .tdeep{margin:2px 0 10px}.tdeep .tabout{font-size:15px;line-height:1.55;margin:0 0 6px}.tdeep .ttheory{font-size:14px;line-height:1.5;color:var(--muted);margin:0}.theard a{white-space:nowrap}.theard span{color:var(--muted)}
+.jtcard summary{cursor:pointer;display:flex;flex-direction:column;gap:2px;list-style:none}.jtcard summary::-webkit-details-marker{display:none}.jtcard summary b::before{content:"▸ ";color:var(--muted)}.jtcard[open] summary b::before{content:"▾ "}.jtcard[open] summary{margin-bottom:10px}.jtgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px 20px;margin:10px 0}.jtgrid h4{margin:0 0 4px}.jtgrid ol,.jtgrid ul{margin:0;padding-left:20px}.jtsteps{flex-wrap:wrap;gap:8px;margin:8px 0}
 </style>
 
 <nav class="sidebar" id="sidebar" aria-label="Theory Club"></nav><div class="scrim" id="scrim" hidden></div>
@@ -7062,7 +7063,7 @@ const jUnits=(inst=jInst())=>JOURNEY[inst].map((ids,lv)=>ids.map(id=>({key:`${lv
 const jStore=()=>{const all=store.get('journey',{})||{};return all[INST_RAW()]||{}};
 const jSave=(key,rec)=>{const all=store.get('journey',{})||{};const mine=all[INST_RAW()]||{};mine[key]=rec;all[INST_RAW()]=mine;store.set('journey',all)};
 const jLevelDone=(lv)=>{const S=jStore();return jUnits()[lv].every(u=>S[u.key]&&S[u.key].passed)};
-const jUnlocked=lv=>lv===0||jLevelDone(lv-1);
+const jUnlocked=lv=>lv===0||jLevelDone(lv-1)||lv<=((store.get('jtgrand',{})||{})[INST_RAW()]||0);
 const jCurLevel=()=>jLevelDone(0)?(jLevelDone(1)?2:1):0;
 function jMake(u){const r=mulberry((Math.random()*2**32)>>>0);const lv=u.lv;const out=[],seen=new Set();const banks={};
  const W=u.src.reduce((a,s)=>a+s[1],0);
@@ -7623,7 +7624,62 @@ function techSongs(inst,k,skip){const out=[];(PLAYDB[inst]||[]).forEach(L=>L.son
  const mid=`<div class="lgrid"><div><h4>Practice plan</h4><ol>${X.plan.map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div><div><h4>Once you’ve got it, try</h4><ul>${X.vary.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></div>${also.length?`<p class="hint theard">Also used in: ${also.map(([sl,t,n])=>`<a href="#song-${sl}">${esc(t)}</a> <span>(${esc(n)})</span>`).join(' · ')}</p>`:''}`;
  return h.replace('<div class="lgrid">',top+'<div class="lgrid">').replace('<div class="pills lsteps"',mid+'<div class="pills lsteps"')}}
 
-window.__tc={jMake,jUnits,JB,JG,engrave,asciiFitBar,JO,JR,joLnow,natSess,joChordAt:(...a)=>joChordAt(...a),UPD,TAB_EX,makeZip,midiFile,gtrVoice,drumVary,percHits,DKITS,drum,PLAYDB,TECH,PD,studyEx,pdEx,parseAsciiTab,scoreToEx,drumChart,topicPool,ksBuf,pianoBuf,detectPitch,audio:()=>audio(),AC:()=>AC,MASTER:()=>MASTER,tone:(...a)=>tone(...a),renderOffline:(...a)=>renderOffline(...a),itemFx:(...a)=>itemFx(...a),transformEx,chromaOf,chordMissing,packCode,unpackCode,MEDIA:()=>MEDIA,progressData,lickEx,LICKLIB,earQuestion,heardNotes,icsFor,INPUT:()=>INPUT,startTour,homeClef,noteQ,JT:()=>JT,JOURNEY:()=>JOURNEY,G:()=>G,songStepEx,TECHX:()=>TECHX,gtrOut:()=>gtrOut()};
+/* ================= v39: technique levels in the journey ================= */
+const JTECH={
+ guitar:[['downpick','power','pent','slides','shuffle','skank','mutedriff'],['bends','vibrato','legato','doublestops','arpeggio','funk','travis','jangle','riffs','thumbchord'],['octaves','chicken','tremolo','gypsy','dom7s9','tritone','rakes','scratch','phrasing','chromatic','triadinv','blockchords']],
+ bass:[['root8','r5','octave','bslides','reggae'],['walk','melodic','ghost','bchromatic','hook'],['slap','harmonics','fast16','bchords','gallop','unison']],
+ drums:[['rockbeat','twobeat','hats','fills','motorik','disco'],['ghost16','shuffle','onedrop','toms','train','triplets','hits','washhat'],['halfshuffle','swing','brushes','doublekick','heavy','pressroll']],
+ piano:[['ballad','arps','waltz','pump','alberti'],['boogie','octaves','ostinato','charleston','slipnote'],['jazzvoicings','stride','gliss','gospel','crush']]};
+const jtInst=()=>{const i=INST_RAW();return JTECH[i]?i:null};
+const jtKeys=(inst,lv)=>(JTECH[inst]||[])[lv]?JTECH[inst][lv].filter(k=>TECH[inst]&&TECH[inst][k]):[];
+/* people who already passed a level before technique topics existed keep the levels they unlocked */
+(()=>{try{if(store.get('jtgrandDone',false))return;const all=store.get('journey',{})||{};const G={};
+ for(const inst in all){if(!JOURNEY[inst])continue;const S=all[inst]||{};let g=0;for(let lv=0;lv<2;lv++){if(JOURNEY[inst][lv].every(id=>S[`${lv}.${id}`]&&S[`${lv}.${id}`].passed))g=lv+1;else break}if(g)G[inst]=g}
+ store.set('jtgrand',G);store.set('jtgrandDone',true)}catch(e){}})();
+const jGrand=lv=>{const g=(store.get('jtgrand',{})||{})[INST_RAW()]||0;return lv<=g};
+['Beginner','Intermediate','Experienced'].forEach((n,lv)=>{JT['tech'+lv]=[n+' techniques',['jtech-'+lv],[['g:tech'+lv,1]]]});
+for(const inst in JTECH)JOURNEY[inst].forEach((L,lv)=>{if(!L.includes('tech'+lv))L.push('tech'+lv)});
+/* questions about the techniques at one level */
+const jtMask=(txt,name)=>{let t=String(txt||'');const ws=[name,...name.split(/[ &,/]+/).filter(w=>w.length>4)];ws.forEach(w=>{t=t.replace(new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'),'this')});return t};
+const jtFirst=t=>String(t||'').split(/(?<=\.)\s/)[0];
+function jtQuestion(r,lv){const inst=jtInst();if(!inst)return null;const ks=jtKeys(inst,lv);if(ks.length<2)return null;const all=Object.keys(TECH[inst]).filter(k=>TECH[inst][k].name&&!k.startsWith('__'));
+ const k=pick(r,ks);const T=TECH[inst][k],X=(TECHX[inst]||{})[k]||{};const others=n=>shuffle(r,[...shuffle(r,ks.filter(x=>x!==k)),...shuffle(r,all.filter(x=>x!==k&&!ks.includes(x)))]).slice(0,n);
+ const nameQ=(prompt,explain)=>{const opts=[T.name];for(const o of others(12)){const nm=TECH[inst][o].name;if(!opts.includes(nm))opts.push(nm);if(opts.length===4)break}return opts.length===4?{prompt,options:shuffle(r,opts),answer:T.name,explain}:null};
+ const textQ=(prompt,ans,field,explain)=>{if(!ans)return null;const opts=[ans];for(const o of others(all.length)){const Y=(TECHX[inst]||{})[o]||{};let v=Y[field];if(Array.isArray(v))v=pick(r,v);if(field==='theory')v=jtFirst(v);if(v&&!opts.includes(v)&&!v.toLowerCase().includes(T.name.toLowerCase()))opts.push(v);if(opts.length===4)break}return opts.length===4?{prompt,options:shuffle(r,opts),answer:ans,explain}:null};
+ const kinds=['desc','desc','how','about','mist','songs','vary','plan','theory'];
+ for(let t=0;t<6;t++){const kind=pick(r,kinds);let q=null;
+  if(kind==='desc')q=nameQ(`Which technique is this? “${T.desc}”`,X.about?jtFirst(X.about):T.desc);
+  else if(kind==='how'&&X.how&&X.how.length){const h=pick(r,X.how);if(!h.toLowerCase().includes(T.name.toLowerCase()))q=nameQ(`“${jtMask(h,T.name)}” Which technique is this a step of?`,`It’s one of the steps for ${T.name}.`)}
+  else if(kind==='about'&&X.about)q=nameQ(`Which technique is described here? “${jtMask(jtFirst(X.about),T.name)}”`,X.about);
+  else if(kind==='mist'&&X.mist&&X.mist.length){const m=pick(r,X.mist);q=textQ(`Which of these is a common mistake when playing ${T.name}?`,m,'mist',`Watch out for this with ${T.name}: ${m}`)}
+  else if(kind==='vary'&&X.vary&&X.vary.length){const v=pick(r,X.vary);q=textQ(`Once you’ve got ${T.name}, which of these is a variation to try?`,v,'vary',v)}
+  else if(kind==='plan'&&X.plan&&X.plan.length)q=textQ(`What’s the first step in the practice plan for ${T.name}?`,X.plan[0],'plan',`Start slowly: ${X.plan[0]}`);
+  else if(kind==='theory'&&X.theory)q=textQ(`Why does ${T.name} sound the way it does?`,jtFirst(X.theory),'theory',X.theory);
+  else if(kind==='songs'){const yes=techSongs(inst,k,'');if(yes.length){const y=pick(r,yes);const no=[];(PLAYDB[inst]||[]).forEach(L=>L.songs.forEach(sg=>{if(Array.isArray(sg[1])&&!sg[1].includes(k)&&!String(sg[1][0]).startsWith('pd:'))no.push(`${sg[0]} (${L.name})`)}));const ans=`${y[1]} (${y[2]})`;const opts=[ans];for(const n of shuffle(r,no)){if(!opts.includes(n))opts.push(n);if(opts.length===4)break}if(opts.length===4)q={prompt:`Which of these songs uses ${T.name}?`,options:shuffle(r,opts),answer:ans,explain:`${y[1]} by ${y[2]} uses ${T.name}. You can practise it on the song’s page.`}}}
+  if(q){q.jt=k+':'+kind;return q}}
+ return nameQ(`Which technique is this? “${T.desc}”`,T.desc)}
+[0,1,2].forEach(lv=>{G['tech'+lv]=(r,lv2)=>{const q=jtQuestion(r,lv);if(q)q.topic='j-tech'+lv;return q}});
+/* the technique workshop: every technique at a level, with its 3-step lesson */
+function viewJTech(lv){const inst=jtInst();if(!inst){location.hash='#journey';return}const ks=jtKeys(inst,lv);const key=`${lv}.tech${lv}`;const S=jStore()[key];const un=jUnlocked(lv);
+ const card=k=>{const T=TECH[inst][k],X=(TECHX[inst]||{})[k]||{};const songs=techSongs(inst,k,'').slice(0,4);
+  return`<details class="panel jtcard" data-k="${k}"><summary><b>${esc(T.name)}</b><span class="hint">${esc(T.desc)}</span></summary>
+  ${X.about?`<p>${esc(X.about)}</p>`:''}${X.theory?`<p class="hint"><b>How it works:</b> ${esc(X.theory)}</p>`:''}
+  <div class="jtgrid">${X.how?`<div><h4>How to play it</h4><ol>${X.how.map(h=>`<li>${esc(h)}</li>`).join('')}</ol></div>`:''}${X.mist?`<div><h4>Watch out for</h4><ul>${X.mist.map(h=>`<li>${esc(h)}</li>`).join('')}</ul></div>`:''}
+  ${X.plan?`<div><h4>Practice plan</h4><ol>${X.plan.map(h=>`<li>${esc(h)}</li>`).join('')}</ol></div>`:''}${X.vary?`<div><h4>Once you’ve got it, try</h4><ul>${X.vary.map(h=>`<li>${esc(h)}</li>`).join('')}</ul></div>`:''}</div>
+  <div class="row jtsteps">${X.move?`<button class="btn small" data-st="move">1 · ${esc(X.move.name)}</button>`:''}<button class="btn small" data-st="study">${X.move?'2 · ':''}Study</button>${X.phrase?`<button class="btn small" data-st="phrase">3 · ${esc(X.phrase.name)}</button>`:''}</div>
+  <div class="jtplayer stack"></div>
+  ${songs.length?`<p class="hint">Songs that use it: ${songs.map(s=>`<a href="#song-${s[0]}">${esc(s[1])}</a> (${esc(s[2])})`).join(' · ')}</p>`:''}</details>`};
+ main.innerHTML=`<a class="back" href="#journey">‹ Learning journey</a><div class="pagehead"><div class="stack" style="gap:6px"><span class="eyebrow">${JLV[lv]} · ${esc(INST_NAME[inst]||inst)} techniques</span><h1>${JLV[lv]} techniques</h1>
+  <p class="lede">Learn these ${ks.length} techniques, then pass the quiz (${JPASS} out of ${JN}) to finish the ${JLV[lv]} level${lv<2?` and move on to ${JLV[lv+1]}`:''}. Open each one, read how it works and play through its three steps.</p></div>
+  ${un?`<a class="btn ${S&&S.passed?'':'primary'}" href="#jq-${key}">${S&&S.passed?'Retake the quiz':'Take the quiz'}</a>`:''}</div>
+  ${S?`<p class="hint">Best ${S.best}/${JN}${S.passed?' · passed ✓':` · need ${JPASS}`}</p>`:''}${un?'':`<p class="callout">Pass every ${JLV[lv-1]} topic to unlock this quiz. You can still learn the techniques now.</p>`}
+  <div class="stack jtlist">${ks.map(card).join('')}</div>`;
+ main.querySelectorAll('.jtcard').forEach(d=>{const k=d.dataset.k;d.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{stopSeq();main.querySelectorAll('.jtplayer').forEach(p=>p.innerHTML='');d.querySelectorAll('[data-st]').forEach(x=>x.classList.toggle('primary',x===b));
+  const ex=songStepEx(inst,k,b.dataset.st,[k]);if(ex)mountPlayer(d.querySelector('.jtplayer'),ex,{srs:{id:'jtech:'+inst+':'+k+':'+b.dataset.st,title:techLabel(inst,k),href:'#learn-jtech-'+lv}})})})}
+{const _r=route;route=function(){const h=location.hash.slice(1);const m=h.match(/^learn-jtech-([0-2])$/);if(m){stopSeq();stopLoop();stopDemo();QUIZ=null;renderChrome('journey');viewJTech(+m[1]);return}_r()}}
+{const _jl=jLessonLinks;jLessonLinks=function(u){const t=u.lessons.find(k=>/^jtech-/.test(k));if(t)return`<a href="#learn-${t}">${JLV[u.lv]} techniques workshop</a>`;return _jl(u)}}
+
+window.__tc={JTECH,jtQuestion,viewJTech,jMake,jUnits,JB,JG,engrave,asciiFitBar,JO,JR,joLnow,natSess,joChordAt:(...a)=>joChordAt(...a),UPD,TAB_EX,makeZip,midiFile,gtrVoice,drumVary,percHits,DKITS,drum,PLAYDB,TECH,PD,studyEx,pdEx,parseAsciiTab,scoreToEx,drumChart,topicPool,ksBuf,pianoBuf,detectPitch,audio:()=>audio(),AC:()=>AC,MASTER:()=>MASTER,tone:(...a)=>tone(...a),renderOffline:(...a)=>renderOffline(...a),itemFx:(...a)=>itemFx(...a),transformEx,chromaOf,chordMissing,packCode,unpackCode,MEDIA:()=>MEDIA,progressData,lickEx,LICKLIB,earQuestion,heardNotes,icsFor,INPUT:()=>INPUT,startTour,homeClef,noteQ,JT:()=>JT,JOURNEY:()=>JOURNEY,G:()=>G,songStepEx,TECHX:()=>TECHX,gtrOut:()=>gtrOut()};
 /* ---------- router ---------- */
 function route(){stopSeq();stopLoop();stopDemo();QUIZ=null;clearInterval(WU_T);focusOff();const h=location.hash.slice(1)||'home';const tab=h.startsWith('learn')?'learn':h.startsWith('tools')?'tools':h==='progress'?'plan':['practice','plan'].includes(h)?h:'daily';
  renderChrome(h);
