@@ -6,6 +6,8 @@ name: Build desktop apps
 # download the update in the background and offer a restart.
 #
 # Needs one repository secret: TAURI_SIGNING_PRIVATE_KEY (see README).
+#
+# The tests in tests/ run first. If any fail, nothing is built or released.
 
 on:
   workflow_dispatch:
@@ -22,7 +24,23 @@ env:
   CMAKE_POLICY_VERSION_MINIMUM: "3.5"
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install the test browser
+        run: |
+          pip install playwright==1.49.1
+          python -m playwright install --with-deps chromium
+      - name: Run the release tests
+        run: python tests/smoke.py
+
   prep:
+    needs: test
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.v.outputs.version }}
