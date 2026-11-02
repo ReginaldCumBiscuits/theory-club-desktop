@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Theory Club</title></head><body>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Geist:wght@400;500;600;700&display=swap">
 <title>Theory Club</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -1089,6 +1089,73 @@ main nav.secnav.pills{display:flex;flex-wrap:nowrap;overflow-x:auto;width:auto;m
 .tmore{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 20px;margin:12px 0;padding:12px 14px;border-radius:12px;background:var(--panel2,rgba(127,127,127,.07))}.tmore h4{margin:0 0 4px}.tmore p{margin:0}.tmore dl{margin:0}.tmore dt{font-weight:600}.tmore dd{margin:0 0 6px}.jroadbar{margin:10px 0 4px}.jroadbar.pick{outline:2px solid var(--accent,#5b8def)}.roadgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}.roadcard.cur{outline:2px solid var(--accent,#5b8def)}.roadcard h3{margin:0}.roadlv{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}.roadlv ul{margin:4px 0 0;padding-left:18px;font-size:.92em}.vidlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}.vid{display:flex;flex-direction:column;gap:6px;text-decoration:none;color:inherit}.vid img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;background:#0002}@media (max-width:520px){.roadlv{grid-template-columns:1fr}}
 .lplan{margin:12px 0;padding:10px 14px;border-radius:12px;border:1px solid var(--line,rgba(127,127,127,.25))}.lplan>summary{cursor:pointer}.lpsteps{margin:10px 0 4px;padding-left:22px;display:grid;gap:10px}.lpsteps li>div:first-child{margin-bottom:2px}.lpwhy summary{cursor:pointer;font-size:.88em;color:var(--muted)}.lpwhy p{margin:4px 0 0}.wkplan{border-collapse:collapse;width:100%}.wkplan th{text-align:left;padding:6px 10px 6px 0;white-space:nowrap;vertical-align:top}.wkplan td{padding:6px 0}.wkplan tr+tr{border-top:1px solid var(--line,rgba(127,127,127,.2))}.cando li{margin:4px 0}
 .icgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-top:10px}.iccard{display:flex;flex-direction:column;gap:3px;text-align:left;padding:12px;border-radius:12px;border:1px solid var(--line,rgba(127,127,127,.25));background:var(--card,transparent);color:inherit;font:inherit;cursor:pointer}.iccard.on{outline:2px solid var(--accent,#5b8def);background:rgba(91,141,239,.08)}.iccard:disabled{opacity:.45;cursor:not-allowed}.pbuild h4{margin:0 0 6px}#picq{width:100%;max-width:360px;padding:8px 10px;border-radius:10px;border:1px solid var(--line,rgba(127,127,127,.3));background:transparent;color:inherit;font:inherit}.pweek.done{opacity:.6}.pwh{justify-content:space-between;align-items:flex-start;gap:12px}.pweek h3{margin:2px 0}.pdone{white-space:nowrap;display:flex;gap:6px;align-items:center}.phead{margin:18px 0 0;font-size:1.15em}.pweek .pill.sm{font-size:.75em;padding:1px 6px;margin-left:4px}.pdays{margin-top:8px}.pdays summary{cursor:pointer}@media print{.pweek{break-inside:avoid}}
+.lookup{margin-top:14px;padding:14px 16px;border-radius:14px;background:var(--panel2,rgba(127,127,127,.07));display:flex;flex-direction:column;gap:8px}.lookup p{margin:0}.lookup textarea,.lookup select{width:100%;max-width:420px;padding:8px 10px;border-radius:10px;border:1px solid var(--line,rgba(127,127,127,.3));background:transparent;color:inherit;font:inherit;display:block;margin-top:4px}.spin{display:inline-block;width:12px;height:12px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:tcspin .8s linear infinite;vertical-align:-1px;margin-right:6px}@keyframes tcspin{to{transform:rotate(360deg)}}
+
+/* ================= v40 design pass: more room, clearer hierarchy =================
+   Layout idea: an airy practice notebook. Generous gaps between sections, roomier cards,
+   one expressive display face for titles, and a faint five-line staff under each page title. */
+:root{--f-title:'Bricolage Grotesque','Geist',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;--gap-1:8px;--gap-2:14px;--gap-3:20px;--gap-4:28px;--gap-5:40px;--r-card:18px;--r-ctl:12px;--lift:0 1px 2px color-mix(in srgb,var(--ink) 6%,transparent),0 6px 18px -10px color-mix(in srgb,var(--ink) 18%,transparent)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--lift:0 1px 2px rgba(0,0,0,.4),0 8px 22px -12px rgba(0,0,0,.6)}}
+:root[data-theme="dark"]{--lift:0 1px 2px rgba(0,0,0,.4),0 8px 22px -12px rgba(0,0,0,.6)}
+body{line-height:1.6}
+main{gap:var(--gap-5)}
+h1,h2,h3,.pagehead h1,.lhead h1{font-family:var(--f-title);text-wrap:balance;letter-spacing:-.015em}
+h1,.pagehead h1,.lhead h1{font-weight:700;font-size:clamp(1.9rem,4.2vw,2.7rem);line-height:1.08}
+h2{font-weight:700;font-size:clamp(1.3rem,2.4vw,1.6rem);line-height:1.2}
+h3{font-weight:650;font-size:1.15rem;line-height:1.3}
+.eyebrow{letter-spacing:.02em;font-weight:600}
+.jroadbar b,.roadcard h3{font-family:var(--f-title);font-size:1.2rem}
+@media (max-width:640px){.jlv{padding:14px 16px!important}.jlevels{gap:10px!important}}
+.lede{font-size:1.04rem;line-height:1.65;max-width:64ch}
+/* page titles sit on a faint staff */
+.pagehead{margin-bottom:var(--gap-3);padding-bottom:var(--gap-3);gap:var(--gap-2) var(--gap-4);position:relative}
+.pagehead::after{content:"";position:absolute;left:0;right:0;bottom:0;height:9px;background:repeating-linear-gradient(to bottom,var(--line) 0 1px,transparent 1px 2px);opacity:.9;pointer-events:none}
+.pagehead .stack{gap:10px!important}
+/* cards and panels */
+.panel{padding:clamp(18px,2.6vw,28px);border-radius:var(--r-card);gap:var(--gap-3);box-shadow:var(--lift)}
+.panel h3{margin:0}
+.stack{gap:var(--gap-4)}
+.hgrid{gap:var(--gap-2)}
+.hcard{padding:20px 22px;border-radius:var(--r-card);gap:8px;box-shadow:var(--lift)}
+.hcard b{font-family:var(--f-title);font-size:1.12rem;font-weight:650;line-height:1.25}
+.hcard .hbar{margin-top:4px}
+.btn{border-radius:var(--r-ctl);padding:10px 18px}
+.btn.small{padding:7px 14px;border-radius:10px}
+.row{gap:10px}
+/* journey */
+.jlevels{gap:var(--gap-2)!important;margin-block:var(--gap-2)}
+.jlv{padding:18px 20px!important;border-radius:var(--r-card)!important}
+.jlv b{font-family:var(--f-title);font-size:1.25rem}
+.jlist{gap:var(--gap-2)}
+.junit{padding:18px 20px;gap:18px;border-radius:var(--r-card);box-shadow:var(--lift)}
+.junit .jbody{display:flex;flex-direction:column;gap:4px;min-width:0}
+.junit .jbody b{font-size:1.04rem}
+.jroadbar{margin:0 0 var(--gap-2)}
+/* lessons and techniques */
+.techs{gap:var(--gap-2)}
+.tech{padding:16px 18px;border-radius:14px;gap:6px}
+.slesson h4,.jtgrid h4,.tmore h4,.lgrid h4{font-size:.95rem;margin:0 0 8px;font-family:var(--f-title);letter-spacing:0}
+.slesson ol,.slesson ul{font-size:15px;line-height:1.6;gap:8px}
+.lgrid{gap:var(--gap-3) var(--gap-4)}
+.jtgrid{gap:var(--gap-3) var(--gap-4);margin:var(--gap-2) 0}
+.jtgrid ol,.jtgrid ul{display:grid;gap:6px}
+.tmore{padding:18px 20px;gap:var(--gap-3) var(--gap-4);border-radius:14px}
+.lplan{padding:14px 18px;border-radius:14px}
+.lpsteps{gap:14px}
+.callout{padding:14px 18px;line-height:1.6}
+.roadgrid,.icgrid{gap:var(--gap-2)}
+.roadcard{gap:var(--gap-2)}
+.iccard{padding:16px 18px;gap:6px;border-radius:14px}
+.iccard b{font-family:var(--f-title);font-size:1.02rem}
+.pweeks{gap:var(--gap-3)!important}
+.pweek h3{font-size:1.25rem}
+.phead{margin:var(--gap-4) 0 0;font-size:1.4rem}
+.vids{gap:var(--gap-2);padding-top:var(--gap-4)}
+.vgrid,.vgrid2,.vidlist{gap:var(--gap-2)!important}
+/* the side navigation breathes a little more */
+.sidebar a{min-height:42px}
+@media (max-width:640px){main{gap:var(--gap-4)}.panel{padding:18px}.hcard{padding:18px}.junit{padding:16px;gap:14px}.junit .jact{flex-wrap:wrap}.pagehead{padding-bottom:var(--gap-2)}}
+@media (prefers-reduced-motion:reduce){.hcard,.spin{transition:none;animation:none}}
 </style>
 
 <nav class="sidebar" id="sidebar" aria-label="Theory Club"></nav><div class="scrim" id="scrim" hidden></div>
@@ -7915,13 +7982,14 @@ function viewPlanBuilder(edit){const saved=store.get('lplan',null);if(saved&&sav
   <section class="panel stack pbuild"><div><h4>1. Instrument</h4>${pillsHTML('pinst',[['guitar','Guitar'],['bass','Bass'],['drums','Drums'],['piano','Piano'],['voice','Voice']],o.inst,'pills')}</div>
    <div><h4>2. Your experience on ${esc((INST_NAME[o.inst]||o.inst).toLowerCase())}</h4>${pillsHTML('plvl',PLAN_LV.map((n,i)=>[String(i),n]),String(o.lvl),'pills')}</div>
    <div><h4>3. Your time</h4><div class="row" style="gap:16px;flex-wrap:wrap"><span>${pillsHTML('pmins',[10,20,30,45,60].map(x=>[String(x),x+' min']),String(o.mins),'pills')}<span class="hint">a day</span></span><span>${pillsHTML('pdays',[3,4,5,6,7].map(x=>[String(x),x+' days']),String(o.days),'pills')}<span class="hint">a week</span></span></div></div>
-   <div><h4>4. Choose up to five icons <span class="hint">${o.icons.length} of 5 chosen</span></h4><input type="search" id="picq" placeholder="Search musicians or styles" value="${esc(q)}" aria-label="Search musicians">
-    <div class="icgrid">${list.map(i=>{const on=o.icons.includes(i.name);const ys=i.eras.flatMap(e=>e.songs.map(s=>s[1]));return`<button class="iccard ${on?'on':''}" data-ic="${esc(i.name)}" aria-pressed="${on}" ${!on&&o.icons.length>=5?'disabled':''}><b>${esc(i.name)}</b><span class="hint">${esc(i.genre)} · ${Math.min(...ys)}–${Math.max(...ys)}</span><span class="hint">${esc(i.blurb)}</span></button>`}).join('')||'<p class="hint">No musicians match that search.</p>'}</div></div>
+   <div><h4>4. Choose up to five icons <span class="hint">${o.icons.length} of 5 chosen</span></h4><input type="search" id="picq" placeholder="Search any guitarist, bassist, drummer, pianist or singer" value="${esc(q)}" aria-label="Search musicians">
+    <div class="icgrid">${list.map(i=>{const on=o.icons.includes(i.name);const ys=i.eras.flatMap(e=>e.songs.map(s=>s[1]));return`<button class="iccard ${on?'on':''}" data-ic="${esc(i.name)}" aria-pressed="${on}" ${!on&&o.icons.length>=5?'disabled':''}><b>${esc(i.name)}${i.custom?` <span class="pill sm">${i.custom==='manual'?'added by you':'researched'}</span>`:''}</b><span class="hint">${esc(i.genre)} · ${Math.min(...ys)}–${Math.max(...ys)}</span><span class="hint">${esc(i.blurb)}</span></button>`}).join('')||''}</div>${lookupPanelHTML(q,o.inst)}</div>
    <div class="row"><button class="btn primary" id="pbuild" ${o.icons.length?'':'disabled'}>Build my plan</button>${saved&&saved.plan?'<a class="btn" href="#plan">Back to my plan</a>':''}</div></section>`;
   const grp=(g,f)=>main.querySelectorAll(`[data-group="${g}"] .pill, .pills[data-group="${g}"] [data-v]`).forEach(b=>b.onclick=()=>{f(b.dataset.v);render()});
   grp('pinst',v=>{if(v!==o.inst){o.inst=v;o.icons=[]}});grp('plvl',v=>o.lvl=+v);grp('pmins',v=>o.mins=+v);grp('pdays',v=>o.days=+v);
   const s=main.querySelector('#picq');s.oninput=()=>{q=s.value;const pos=s.selectionStart;render();const s2=main.querySelector('#picq');s2.focus();try{s2.setSelectionRange(pos,pos)}catch(e){}};
   main.querySelectorAll('[data-ic]').forEach(b=>b.onclick=()=>{const n=b.dataset.ic;o.icons=o.icons.includes(n)?o.icons.filter(x=>x!==n):o.icons.length<5?[...o.icons,n]:o.icons;render()});
+  wireLookup(main,()=>q,o.inst,ic=>{q='';if(!o.icons.includes(ic.name)&&o.icons.length<5)o.icons.push(ic.name);render();toast(`${ic.name} added`)},v=>{o.inst=v;o.icons=[];render()});
   main.querySelector('#pbuild').onclick=()=>{const plan=buildPlan(o);store.set('lplan',{opts:o,plan,done:{},at:Date.now()});toast('Your lesson plan is ready');viewMyPlan()}};
  render()}
 function viewMyPlan(){const S=store.get('lplan',null);if(!S||!S.plan){viewPlanBuilder(true);return}const P=S.plan;const done=S.done||{};
@@ -7947,7 +8015,76 @@ function viewMyPlan(){const S=store.get('lplan',null);if(!S||!S.plan){viewPlanBu
  const j=g.querySelector('.jhome');if(j)j.insertAdjacentHTML('afterend',html);else g.insertAdjacentHTML('afterbegin',html)}}
 {const _rb=roadBar;roadBar=function(){const h=_rb();return h.replace('<a class="btn small','<a class="btn small" href="#plan">Lesson plan from my icons</a><a class="btn small')}}
 
-window.__tc={ICONS,buildPlan,viewMyPlan,viewPlanBuilder,techDiff,lessonPlanHTML,roadPlanHTML,ROADS,jLevels,techT,techX,VTECH,viewRoads,curRoad,setRoad,JTECH,jtQuestion,viewJTech,jMake,jUnits,JB,JG,engrave,asciiFitBar,JO,JR,joLnow,natSess,joChordAt:(...a)=>joChordAt(...a),UPD,TAB_EX,makeZip,midiFile,gtrVoice,drumVary,percHits,DKITS,drum,PLAYDB,TECH,PD,studyEx,pdEx,parseAsciiTab,scoreToEx,drumChart,topicPool,ksBuf,pianoBuf,detectPitch,audio:()=>audio(),AC:()=>AC,MASTER:()=>MASTER,tone:(...a)=>tone(...a),renderOffline:(...a)=>renderOffline(...a),itemFx:(...a)=>itemFx(...a),transformEx,chromaOf,chordMissing,packCode,unpackCode,MEDIA:()=>MEDIA,progressData,lickEx,LICKLIB,earQuestion,heardNotes,icsFor,INPUT:()=>INPUT,startTour,homeClef,noteQ,JT:()=>JT,JOURNEY:()=>JOURNEY,G:()=>G,songStepEx,TECHX:()=>TECHX,gtrOut:()=>gtrOut()};
+/* ================= v40: look up any musician ================= */
+/* In Claude, Theory Club asks Claude to research a musician you name and builds them into an icon with
+   the same shape as the built-in ones: career eras, real songs with years, and the techniques each song teaches.
+   Elsewhere you can add a musician yourself by listing a few of their songs. */
+const MYICON_KEY='myicons';
+function iconNorm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/^the\s+/,'').replace(/[^a-z0-9]+/g,' ').trim()}
+function addIconData(inst,ic){if(!ICONS[inst])ICONS[inst]=[];const i=ICONS[inst].findIndex(x=>iconNorm(x.name)===iconNorm(ic.name));if(i>=0)ICONS[inst][i]=ic;else ICONS[inst].push(ic);
+ if(!PLAYDB[inst])return;const norm=t=>t.toLowerCase().replace(/[’']/g,"'").replace(/[^a-z0-9']+/g,' ').trim();let L=PLAYDB[inst].find(x=>x.name===ic.name);if(!L){L={genre:ic.genre,name:ic.name,blurb:ic.blurb,songs:[]};PLAYDB[inst].push(L)}
+ ic.eras.forEach(e=>e.songs.forEach(([t,y,ks,note])=>{const ok=ks.filter(k=>TECH[inst][k]);if(!ok.length||L.songs.some(s=>norm(s[0])===norm(t)))return;L.songs.push([t,ok.slice(0,5),note])}))}
+(()=>{const M=store.get(MYICON_KEY,{})||{};for(const inst in M)(M[inst]||[]).forEach(ic=>{try{addIconData(inst,ic)}catch(e){}})})();
+function saveMyIcon(inst,ic){const M=store.get(MYICON_KEY,{})||{};M[inst]=(M[inst]||[]).filter(x=>iconNorm(x.name)!==iconNorm(ic.name));M[inst].push(ic);store.set(MYICON_KEY,M);addIconData(inst,ic)}
+function findIcon(name){const n=iconNorm(name);if(!n)return[];const out=[];for(const inst in ICONS)ICONS[inst].forEach(ic=>{const m=iconNorm(ic.name);if(m===n||m.includes(n)||(n.length>3&&n.includes(m)))out.push({inst,ic})});return out}
+function iconGenres(inst){return PLAYDB[inst]?[...new Set(PLAYDB[inst].map(L=>L.genre))].filter(g=>g!=='Classical'||inst==='piano'):['Pop','Rock','Jazz','Soul & R&B','Folk & traditional','Classical']}
+/* clean up whatever comes back so it can never break the app */
+function cleanIcon(raw,inst){if(!raw||typeof raw!=='object'||raw.unknown)return null;const TT=techT(inst);const now=new Date().getFullYear();
+ const eras=(Array.isArray(raw.eras)?raw.eras:[]).slice(0,4).map(e=>({label:String(e&&e.label||'').slice(0,90),songs:(Array.isArray(e&&e.songs)?e.songs:[]).slice(0,4).map(s=>{const y=parseInt(s&&s.year,10);const ks=(Array.isArray(s&&s.techniques)?s.techniques:[]).map(String).filter(k=>TT[k]).slice(0,5);return s&&s.title&&y>1850&&y<=now&&ks.length?[String(s.title).slice(0,80),y,ks,String(s.note||'').slice(0,160)]:null}).filter(Boolean)})).filter(e=>e.songs.length);
+ eras.forEach(e=>e.songs.sort((a,b)=>a[1]-b[1]));eras.sort((a,b)=>a.songs[0][1]-b.songs[0][1]);
+ if(eras.reduce((n,e)=>n+e.songs.length,0)<3)return null;
+ const g=iconGenres(inst);return{name:String(raw.name||'').slice(0,60),genre:g.includes(raw.genre)?raw.genre:g[0],blurb:String(raw.blurb||'').slice(0,200),eras,custom:raw.custom||'claude'}}
+async function researchIcon(name,inst,onStatus){const sample=window.claude?await window.claude.use('sample'):null;if(!sample)throw{code:'unavailable'};
+ const TT=techT(inst),XX=techX(inst);const list=Object.keys(TT).filter(k=>!k.startsWith('__')).map(k=>`${k}: ${TT[k].name} — ${TT[k].desc}`).join('\n');
+ const role={guitar:'guitarist',bass:'bassist',drums:'drummer',piano:'pianist or keyboard player',voice:'singer'}[inst];
+ const prompt=`You are an experienced music teacher building a lesson plan that teaches ${inst} technique through one musician's songs, from their early career to their late career.
+
+Musician the student typed: "${name}"
+Instrument the student is learning: ${inst}
+
+Use what you know about this musician. If you don't know a real musician by this name, or they aren't known as a ${role} (or for ${inst} parts in their music), reply with only {"unknown": true, "suggestions": [up to 3 similar, well-known ${role}s]}.
+
+Otherwise reply with only this JSON:
+{"name": "their usual name, correctly spelled", "genre": one of ${JSON.stringify(iconGenres(inst))}, "blurb": "one plain sentence about their ${inst} style", "eras": [{"label": "Early career: <band or album> (<years>)", "songs": [{"title": "...", "year": 1999, "techniques": ["key", ...], "note": "one sentence on what this song teaches a ${inst} student"}]}]}
+
+Rules:
+- Three eras in order (early career, middle career, late career). If their career is short, use two.
+- Two or three real, well-known songs per era where they play ${inst}. Use the year the song was first released. Never invent a song, and leave out any song you're unsure about.
+- For each song choose 2 to 4 technique keys ONLY from this list, and only ones that genuinely feature in that song's ${inst} part:
+${list}
+- Write in plain, friendly British English.`;
+ onStatus&&onStatus('Researching '+name+'…');
+ const raw=await sample.json(prompt,{modelTier:'default',cache:{gcTime:86400000}});
+ if(raw&&raw.unknown)throw{code:'unknown',suggestions:Array.isArray(raw.suggestions)?raw.suggestions.slice(0,3).map(String):[]};
+ const ic=cleanIcon(raw,inst);if(!ic)throw{code:'thin'};ic.researched=new Date().toISOString().slice(0,10);return ic}
+/* the offline way: list songs, choose a style, and the app assigns techniques from that style’s road */
+function manualIcon(name,inst,roadId,lines){const TT=techT(inst);const r=ROADMAP[roadId];const pool1=r?r.lv[1].tech:((JTECH[inst]||[])[1]||[]);const pool2=r?r.lv[2].tech:((JTECH[inst]||[])[2]||[]);const base=((JTECH[inst]||[])[0]||['breath','legatov','sirens']);
+ const songs=lines.map(l=>{const m=l.match(/^(.*?)[\s,(–-]+((?:18|19|20)\d\d)\)?\s*$/);return m?[m[1].trim(),+m[2]]:null}).filter(x=>x&&x[0]).sort((a,b)=>a[1]-b[1]).slice(0,9);if(songs.length<2)return null;
+ const n=songs.length,cut=[Math.ceil(n/3),Math.ceil(2*n/3)];const pools=[[...base,...pool1],[...pool1],[...pool1,...pool2]];
+ const eras=[[],[],[]];songs.forEach(([t,y],i)=>{const e=i<cut[0]?0:i<cut[1]?1:2;const P=pools[e].filter(k=>TT[k]);const ks=[...new Set([P[(i*2)%P.length],P[(i*2+1)%P.length],P[(i*3+2)%P.length]].filter(Boolean))];eras[e].push([t,y,ks,'Techniques chosen from the '+(r?r.name:'all-round')+' road. Listen to the original and adjust to what you hear.'])});
+ const lab=['Early career','Middle career','Late career'];return{name,genre:iconGenres(inst)[0],blurb:`Added by you${r?` · ${r.name} style`:''}.`,eras:eras.map((s,i)=>s.length?{label:`${lab[i]} (${s[0][1]}${s.length>1&&s[s.length-1][1]!==s[0][1]?'–'+s[s.length-1][1]:''})`,songs:s}:null).filter(Boolean),custom:'manual'}}
+function lookupPanelHTML(q,inst){if(!q||q.trim().length<2)return'';const hits=findIcon(q);const here=hits.filter(h=>h.inst===inst),other=hits.filter(h=>h.inst!==inst);if(here.length)return'';
+ return`<div class="lookup panel-lite"><b>Can’t find “${esc(q.trim())}”?</b>${other.length?`<p class="hint">${other.map(h=>`${esc(h.ic.name)} is in <a href="#" data-sw="${h.inst}">${esc(INST_NAME[h.inst]||h.inst)}</a>`).join(' · ')}.</p>`:''}
+  <p class="hint">Theory Club can research them and build their career into lessons, just like the musicians above.</p>
+  <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn small primary" id="lkres">Research ${esc(q.trim())}</button><button class="btn small" id="lkman">Add them myself</button></div><div id="lkout" class="stack" aria-live="polite"></div></div>`}
+function wireLookup(root,getQ,inst,onAdded,switchInst){const out=root.querySelector('#lkout');if(!out)return;
+ root.querySelectorAll('[data-sw]').forEach(a=>a.onclick=e=>{e.preventDefault();switchInst(a.dataset.sw)});
+ const res=root.querySelector('#lkres'),man=root.querySelector('#lkman');let ctl=null;
+ res.onclick=async()=>{const name=getQ().trim();res.disabled=true;man.disabled=true;out.innerHTML=`<p class="hint"><span class="spin"></span> Researching ${esc(name)}’s career and songs. This can take up to a minute…</p>`;
+  try{const ic=await researchIcon(name,inst);saveMyIcon(inst,ic);out.innerHTML=`<p>Added <b>${esc(ic.name)}</b>: ${ic.eras.reduce((n,e)=>n+e.songs.length,0)} songs across ${ic.eras.length} eras.</p><p class="hint">Researched by Claude from what it knows. Years and details can occasionally be off; the songs link to practice pages you can check against the recordings.</p>`;onAdded(ic)}
+  catch(e){const c=e&&e.code;res.disabled=false;man.disabled=false;
+   out.innerHTML=c==='unavailable'?`<p class="hint">Research uses Claude, which is available when you open Theory Club inside Claude. Here, use “Add them myself”.</p>`:
+    c==='unknown'?`<p>I couldn’t find a ${inst==='voice'?'singer':'player'} called “${esc(name)}”.${e.suggestions&&e.suggestions.length?` Did you mean ${e.suggestions.map(s=>`<a href="#" data-try="${esc(s)}">${esc(s)}</a>`).join(', ')}?`:' Check the spelling, or add them yourself.'}</p>`:
+    c==='not_granted'||c==='sampling_disabled'?`<p class="hint">Claude isn’t allowed to answer for this page, so research is off. You can still add them yourself.</p>`:
+    c==='rate_limited'?`<p class="hint">Claude is busy for you right now. Try again in a few minutes.</p>`:
+    c==='thin'||c==='invalid_json'?`<p class="hint">Claude couldn’t put together enough reliable songs. Try their full name, or add them yourself.</p>`:`<p class="hint">Something went wrong reaching Claude. Try again in a moment.</p>`;
+   out.querySelectorAll('[data-try]').forEach(a=>a.onclick=ev=>{ev.preventDefault();const s=root.querySelector('#picq');if(s){s.value=a.dataset.try;s.dispatchEvent(new Event('input'))}})}};
+ man.onclick=()=>{const name=getQ().trim();const rs=roadsFor(inst);out.innerHTML=`<div class="stack"><label>Their style <select id="lkroad">${rs.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('')}<option value="">Not sure / all-round</option></select></label>
+  <label>A few of their songs, one per line, with the year <textarea id="lksongs" rows="5" placeholder="Song title (1994)\nAnother song (1998)\nA late song (2010)"></textarea></label>
+  <div class="row"><button class="btn small primary" id="lkadd">Add ${esc(name)}</button></div><p class="hint" id="lkmsg"></p></div>`;
+  out.querySelector('#lkadd').onclick=()=>{const ic=manualIcon(name,inst,out.querySelector('#lkroad').value,out.querySelector('#lksongs').value.split('\n').map(s=>s.trim()).filter(Boolean));if(!ic){out.querySelector('#lkmsg').textContent='Add at least two songs, each with a year, like “Creep (1992)”.';return}saveMyIcon(inst,ic);onAdded(ic)}}}
+
+window.__tc={cleanIcon,manualIcon,findIcon,saveMyIcon,ICONS,buildPlan,viewMyPlan,viewPlanBuilder,techDiff,lessonPlanHTML,roadPlanHTML,ROADS,jLevels,techT,techX,VTECH,viewRoads,curRoad,setRoad,JTECH,jtQuestion,viewJTech,jMake,jUnits,JB,JG,engrave,asciiFitBar,JO,JR,joLnow,natSess,joChordAt:(...a)=>joChordAt(...a),UPD,TAB_EX,makeZip,midiFile,gtrVoice,drumVary,percHits,DKITS,drum,PLAYDB,TECH,PD,studyEx,pdEx,parseAsciiTab,scoreToEx,drumChart,topicPool,ksBuf,pianoBuf,detectPitch,audio:()=>audio(),AC:()=>AC,MASTER:()=>MASTER,tone:(...a)=>tone(...a),renderOffline:(...a)=>renderOffline(...a),itemFx:(...a)=>itemFx(...a),transformEx,chromaOf,chordMissing,packCode,unpackCode,MEDIA:()=>MEDIA,progressData,lickEx,LICKLIB,earQuestion,heardNotes,icsFor,INPUT:()=>INPUT,startTour,homeClef,noteQ,JT:()=>JT,JOURNEY:()=>JOURNEY,G:()=>G,songStepEx,TECHX:()=>TECHX,gtrOut:()=>gtrOut()};
 /* ---------- router ---------- */
 function route(){stopSeq();stopLoop();stopDemo();QUIZ=null;clearInterval(WU_T);focusOff();const h=location.hash.slice(1)||'home';const tab=h.startsWith('learn')?'learn':h.startsWith('tools')?'tools':h==='progress'?'plan':['practice','plan'].includes(h)?h:'daily';
  renderChrome(h);
