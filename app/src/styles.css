@@ -1297,3 +1297,19 @@ body{zoom:var(--a11y-z,1)}
 .yougrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;margin-top:8px}.yougrid>div{display:flex;flex-direction:column;gap:4px;min-width:0}.ybig{font-size:1.5rem}
 .ychart{width:100%;height:auto}.ychart rect{fill:var(--accent);opacity:.45}.ychart rect.cur{opacity:1}.ychart .yl{fill:var(--muted);font-size:10px;text-anchor:middle}.ychart .yline{stroke:var(--accent);stroke-width:3}
 .yjournal{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
+
+/* v53: technique, step by step */
+.ctxl{display:flex;flex-direction:column;gap:8px}
+.ctx{border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.ctx>summary{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;list-style:none}
+.ctx>summary::-webkit-details-marker{display:none}
+.ctx>summary b{font-weight:600;flex:1;min-width:0}
+.ctx>summary::after{content:'▾';color:var(--muted);transition:transform .15s}.ctx[open]>summary::after{transform:rotate(180deg)}
+.ctxn{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;background:var(--accent-soft);color:var(--accent-text)}
+.ctx.ok .ctxn{background:var(--good-soft);color:var(--good)}
+.ctxb{padding:0 14px 14px;display:flex;flex-direction:column;gap:12px}
+.ctxg{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px 22px}
+.ctx .btn:not(.primary){background:var(--surface);border:1px solid var(--line)}
+.ctxg h4{margin:0 0 2px;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.ctxg p{margin:0;line-height:1.55}
+.ctxa{margin:0;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
