@@ -11,6 +11,7 @@ import { readFileSync, writeFileSync, mkdirSync, rmSync, cpSync, readdirSync } f
 import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { splitScripts } from './split-scripts.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const version = process.argv[2] || 'dev';
@@ -66,7 +67,9 @@ for (const f of readdirSync(join(root, 'site'))) {
   if (f === 'sw.js') writeFileSync(join(appDir, f), readFileSync(join(root, 'site', f), 'utf8').replaceAll('__VERSION__', version));
   else cpSync(join(root, 'site', f), join(appDir, f));
 }
-writeFileSync(join(appDir, 'index.html'), page);
+// the app's code in its own file, so it opens faster (the offline file below stays one file)
+{ const sp = splitScripts(page); for (const [n, c] of sp.files) writeFileSync(join(appDir, n), c); writeFileSync(join(appDir, 'index.html'), sp.html);
+  const swp = join(appDir, 'sw.js'); try { const w = readFileSync(swp, 'utf8'); writeFileSync(swp, w.replace(/(const CORE\s*=\s*\[)/, `$1${sp.files.map(f => `'${f[0]}', `).join('')}`)); } catch (e) {} }
 
 // the download page
 const dl = readFileSync(join(root, 'site/download.html'), 'utf8').replaceAll('__REPO__', repo).replaceAll('__VERSION__', version);

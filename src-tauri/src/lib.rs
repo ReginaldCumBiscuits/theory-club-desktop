@@ -292,6 +292,7 @@ pub fn run() {
     let builder = builder.plugin(tauri_plugin_updater::Builder::new().build()).plugin(tauri_plugin_process::init());
     builder
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_notification::init())
         .manage(Eng(engine))
         .manage(Pending::default())
         .manage(ai::Ai::default())

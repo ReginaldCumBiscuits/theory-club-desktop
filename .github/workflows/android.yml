@@ -57,6 +57,9 @@ jobs:
         if: inputs.version != ''
         run: node scripts/prepare-release.mjs "$VERSION" "${{ github.repository }}"
 
+      - name: Faster start on phones (the app's code in its own file)
+        run: node scripts/split-scripts.mjs web
+
       - name: Create the Android project
         run: |
           export NDK_HOME="$ANDROID_HOME/ndk/$NDK_VERSION"

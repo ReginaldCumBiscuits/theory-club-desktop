@@ -122,6 +122,9 @@ async def features(browser):
         ('#course', "!!document.querySelector('.crsnow')&&!!document.querySelector('a[href=\"#course-all\"]')", 'course: where you are'),
         ('#home', "!!document.getElementById('tgo')&&document.querySelectorAll('.todaylist li').length>=4", "today's practice"),
         ('#play', "document.querySelectorAll('.toolgh').length===4", 'Play page'),
+        ('#songs', "document.querySelectorAll('[data-pa]').length>=20&&document.querySelectorAll('[data-pd]').length>=5", 'song play-alongs'),
+        ('#course-1', "!!document.querySelector('.demo svg')&&!!document.querySelector('[data-dplay]')", 'animated demo'),
+        ('#progress', "!!document.querySelector('.youview')&&!!document.querySelector('.ychart')", 'progress view'),
         ('#course-1', "document.querySelectorAll('.crsql li').length>=3&&!!document.querySelector('.crshrs')&&!!document.querySelector('a[href=\"#plan-new\"]')", 'course stage checkpoints, song plan and practice time'),
         ('#journey', "[...document.querySelectorAll('.secnav a')].length===4&&(document.querySelector('.sbnav [aria-current]')||{}).textContent==='Learn'", 'quizzes inside Learn'),
         ('#course-3', "document.querySelectorAll('[data-cg]').length>=4&&document.querySelectorAll('.crsgrid .panel').length>=5", 'course stage'),
@@ -151,6 +154,12 @@ async def features(browser):
             fail('fixing a note did not change it')
     except Exception as e:
         fail(f'fix a wrong note: {e}')
+    # a song play-along opens in the transcriber with chords and a melody
+    await pg.evaluate("paOpen('pd',0)")
+    await pg.wait_for_timeout(900)
+    r = await pg.evaluate("[TS.stage, TS.res.notes.length, TS.res.chords.length, !!document.querySelector('.tstab')]")
+    if not (r[0] == 'play' and r[1] >= 20 and r[2] >= 5 and r[3]):
+        fail(f'song play-along: {r}')
     # play-along scoring: half the notes right, a quarter late, a quarter wrong
     r = await pg.evaluate("(()=>{TS.res={part:'vocals',bpm:120,beats:[0,.5,1,1.5,2,2.5,3,3.5,4,4.5],notes:[0,1,2,3,4,5,6,7].map(i=>({t:.2+i*.5,m:60+i,d:.3})),chords:[],hits:[]};TS.view='lead';PLSC.frames=[];TS.res.notes.forEach((n,i)=>{const off=i%4===1?.2:0;for(let k=0;k<4;k++)PLSC.frames.push({t:n.t+off+k*.03,m:i%4===3?n.m+3:n.m})});PLSC.t0=0;PLSC.t1=4.5;const x=scEval();return x&&[x.hit,x.late,x.wrong,x.miss]})()")
     if r != [4, 2, 2, 0]:
