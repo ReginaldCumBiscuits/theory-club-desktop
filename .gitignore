@@ -6,3 +6,5 @@ release-web/
 _zip/
 src-tauri/ort/*
 !src-tauri/ort/README.md
+dist/
+tools/node_modules/
