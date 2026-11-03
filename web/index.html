@@ -1221,6 +1221,27 @@ h3{font-weight:650;font-size:1.15rem;line-height:1.3}
 .hsech{justify-content:space-between;align-items:baseline;margin-top:6px}.hsec{font:700 1.2rem var(--f-title,inherit);margin:0}.hmore>summary{cursor:pointer;font-weight:600;padding:8px 0}.hmore .hgrid{margin-top:8px}
 .wnov{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:200;padding:16px}.wnbox{max-width:520px;width:100%;max-height:85vh;overflow:auto;display:grid;gap:10px}.wnlist{list-style:none;padding:0;margin:0;display:grid;gap:6px}
 .wnlist a{display:grid;gap:2px;padding:10px 12px;border-radius:var(--r-ctl,12px);background:var(--surface-2);text-decoration:none;color:inherit}.wnlist a:hover{outline:2px solid var(--accent)}
+/* v46 accessibility */
+.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skiplink{position:fixed;left:max(12px,env(safe-area-inset-left,0px));top:calc(-60px + env(safe-area-inset-top,0px));z-index:9999;background:var(--accent);color:var(--accent-ink,#fff);padding:10px 16px;border-radius:10px;font-weight:600;text-decoration:none;transition:top .15s}
+.skiplink:focus{top:calc(10px + env(safe-area-inset-top,0px))}
+body{zoom:var(--a11y-z,1)}
+.badge2:not(.on){opacity:1}.badge2:not(.on) .bico{opacity:.4;filter:grayscale(1)}.badge2:not(.on) b{color:var(--muted)}
+.a11ychk{gap:10px;align-items:flex-start;margin-top:8px}.a11ychk input{margin-top:4px;width:18px;height:18px;flex:0 0 auto}
+.tsread{margin-top:10px}.tsread summary{cursor:pointer;font-weight:600}.tsreadl{margin:8px 0 0;padding-left:22px;display:grid;gap:4px;font-size:.92rem}
+.tstab:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+:root[data-a11y-contrast]{--muted:#30333A;--line:#6B6F78;--accent:#1A2E99}
+@media (prefers-color-scheme:dark){:root[data-a11y-contrast]:not([data-theme="light"]){--muted:#D4D6DC;--line:#9A9EA8;--accent:#9DB0FF}}
+:root[data-theme="dark"][data-a11y-contrast]{--muted:#D4D6DC;--line:#9A9EA8;--accent:#9DB0FF}
+:root[data-a11y-contrast] .btn,:root[data-a11y-contrast] .pill,:root[data-a11y-contrast] .panel,:root[data-a11y-contrast] input,:root[data-a11y-contrast] select{border-width:2px;border-style:solid;border-color:var(--line)}
+:root[data-a11y-contrast] :focus-visible{outline-width:4px!important;outline-offset:3px!important}
+:root[data-a11y-contrast] a{text-decoration-thickness:2px}
+:root[data-a11y-still] *,:root[data-a11y-still] *::before,:root[data-a11y-still] *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+:root[data-a11y-font]{--f-body:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',sans-serif;--f-display:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',sans-serif}
+:root[data-a11y-font] body{letter-spacing:.01em;line-height:1.65}
+
+.jlv.locked{opacity:1}.jlv.locked b,.jlv.locked .eyebrow,.jlv.locked small{color:var(--muted)}.jlv.locked .hbar{opacity:.5}
+.clip:not(.on){opacity:1;color:var(--muted)!important;background:transparent;border:1px solid var(--line)}
 </style>
 
 <nav class="sidebar" id="sidebar" aria-label="Theory Club"></nav><div class="scrim" id="scrim" hidden></div>
@@ -2068,7 +2089,7 @@ PAGES.progressions=el=>{let key='C',mode='major',sev=false;const render=()=>{set
 PAGES.circle=el=>{let i=0;const render=()=>{const k=MAJ[i],sg=sigOf(k),mn=MIN[i];const n=scaleNotes(k,'major');const dia=[1,2,3,4,5,6,7].map(d=>chordAt(k,'major',d));
  const cx=180,cy=180,ang=j=>(-90+j*30)*Math.PI/180;const P=(r,a)=>[cx+r*Math.cos(a),cy+r*Math.sin(a)];
  const arc=(r1,r2,j)=>{const a0=ang(j-.5),a1=ang(j+.5);const[p1,p2,p3,p4]=[P(r2,a0),P(r2,a1),P(r1,a1),P(r1,a0)];return`M${p1}A${r2},${r2} 0 0 1 ${p2}L${p3}A${r1},${r1} 0 0 0 ${p4}Z`};
- let svg=`<svg viewBox="0 0 360 360" role="img" aria-label="Circle of fifths">`;
+ let svg=`<svg viewBox="0 0 360 360" role="group" aria-label="Circle of fifths">`;
  MAJ.forEach((K,j)=>{const[x,y]=P(144,ang(j));svg+=`<g class="seg ${j===i?'sel':''}" data-i="${j}" tabindex="0" role="button" aria-label="${pr(K)} major"><path d="${arc(116,172,j)}"/><text x="${x}" y="${y+6}" text-anchor="middle" font-size="17">${j===6?'F♯/G♭':pr(K)}</text></g>`});
  MIN.forEach((K,j)=>{const[x,y]=P(95,ang(j));svg+=`<g class="seg min ${j===i?'sel':''}" data-i="${j}" tabindex="0" role="button" aria-label="${pr(K)} minor"><path d="${arc(74,116,j)}"/><text x="${x}" y="${y+5}" text-anchor="middle" font-size="12.5">${pr(K)}m</text></g>`});
  svg+=`<circle class="ctr" cx="180" cy="180" r="72"/><text class="ctxt" x="180" y="180" text-anchor="middle" font-size="30">${sg.count||'0'}</text><text class="csub" x="180" y="200" text-anchor="middle">${sg.count?sg.type+(sg.count>1?'s':''):'sharps or flats'}</text></svg>`;
@@ -2712,7 +2733,7 @@ PAGES.bass=el=>{let key='A',pid='pop',pat='r58',bpm=96,playing=false,bar=0;
 PAGES.rhythm=el=>{const NV=[['Whole note','𝅝',4,'1 2 3 4','Lasts the whole bar.'],['Half note','𝅗𝅥',2,'1 2 3 4','Two per bar.'],['Quarter note','♩',1,'1 2 3 4','One per beat. The basic pulse.'],['Eighth notes','♪',.5,'1 & 2 & 3 & 4 &','Two per beat.'],['Sixteenth notes','𝅘𝅥𝅯',.25,'1 e & a 2 e & a…','Four per beat.'],['Triplets','3',1/3,'1 trip let 2 trip let…','Three per beat.'],['Dotted quarter','♩.',1.5,'1 (2) & …','A quarter note plus half again.']];
  const TS=[['4/4','Xxxx',100,'Four quarter-note beats. Most pop, rock and hip-hop.'],['3/4','Xxx',110,'Three beats. Waltzes and many folk songs.'],['2/4','Xx',110,'Two beats. Marches and polkas.'],['6/8','XxxYxx',190,'Six eighth notes felt as two big beats of three. Irish jigs and slow ballads.'],['5/4','XxxYx',150,'Five beats, often 3 + 2. Take Five by Dave Brubeck.'],['7/8','XxYxYxx',230,'Seven eighth notes grouped 2 + 2 + 3. Balkan music and prog rock.']];
  el.innerHTML=`<span class="eyebrow">Rhythm</span><h1>Rhythm & time</h1><p>Rhythm is where notes land in time. The beat is the steady pulse you tap your foot to; note values say how long each note lasts compared with that beat. Every instrument needs this, and drummers live in it.</p>
- <div class="panel"><h3>Note values in 4/4</h3><div class="scroll"><table class="tbl"><thead><tr><th>Note</th><th></th><th>Beats</th><th>Count it</th><th></th></tr></thead><tbody>${NV.map((n,i)=>`<tr><td><b>${n[0]}</b><br><span class="hint">${n[4]}</span></td><td class="big-sym">${n[1]}</td><td class="num">${n[2]===1/3?'⅓':n[2]===.25?'¼':n[2]===.5?'½':n[2]===1.5?'1½':n[2]}</td><td class="formula">${n[3]}</td><td><button class="btn small" data-nv="${i}">${ICON.play}</button></td></tr>`).join('')}</tbody></table></div><p class="hint">Each play button clicks the beat and taps the note value on the snare over one bar.</p></div>
+ <div class="panel"><h3>Note values in 4/4</h3><div class="scroll"><table class="tbl"><thead><tr><th>Note</th><th><span class="sr-only">Symbol</span></th><th>Beats</th><th>Count it</th><th><span class="sr-only">Listen</span></th></tr></thead><tbody>${NV.map((n,i)=>`<tr><td><b>${n[0]}</b><br><span class="hint">${n[4]}</span></td><td class="big-sym">${n[1]}</td><td class="num">${n[2]===1/3?'⅓':n[2]===.25?'¼':n[2]===.5?'½':n[2]===1.5?'1½':n[2]}</td><td class="formula">${n[3]}</td><td><button class="btn small" data-nv="${i}" aria-label="Play ${esc(String(n[0]).replace(/<[^>]*>/g,''))}">${ICON.play}</button></td></tr>`).join('')}</tbody></table></div><p class="hint">Each play button clicks the beat and taps the note value on the snare over one bar.</p></div>
  <h3>Time signatures</h3><p>The top number is how many beats are in a bar; the bottom number is which note gets one beat (4 is a quarter note, 8 is an eighth). The high click is beat 1.</p>
  <div class="cols">${TS.map((t,i)=>`<div class="mini"><h4 class="big-sym" style="font-family:var(--f-display)">${t[0]}</h4><span class="o">${t[3]}</span><div><button class="btn small" data-ts="${i}">${ICON.play} Hear it</button></div></div>`).join('')}</div>
  <p class="callout">Practise with a click. Start slow enough that every note is even, then raise the tempo by 5 BPM at a time.</p>`;
@@ -5570,7 +5591,7 @@ function updSettings(){const body=document.getElementById('setbody');if(!TAU||!b
   <div class="row" style="gap:10px;align-items:center">${UPD.state==='ready'?'<button class="btn primary" id="updnow">Restart and update</button>':`<button class="btn" id="updchk" ${UPD.state==='checking'?'disabled':''}>Check for updates</button>`}<span class="hint">${msg}</span></div>`;
  const a=el.querySelector('#updchk');if(a)a.onclick=()=>updCheck(true);const g=el.querySelector('#updnow');if(g)g.onclick=updInstall}
 if(TAU){natCall('app_version').then(v=>{UPD.ver=v}).catch(()=>{});
- setTimeout(()=>updCheck(false),8000);setInterval(()=>{if(Date.now()-UPD.last>6*3600e3)updCheck(false)},15*60e3);
+ setInterval(()=>{if(Date.now()-UPD.last>6*3600e3)updCheck(false)},15*60e3);
  {const _os=openSettings;openSettings=function(){_os();updSettings()}}
  const sb=document.getElementById('setbody');if(sb&&window.MutationObserver)new MutationObserver(()=>{if(!sb.querySelector('#updset'))updSettings()}).observe(sb,{childList:true});
  {const _lv=joLeave;joLeave=function(q){_lv(q);updBanner()}}}
@@ -7338,7 +7359,7 @@ function songLessonHTML(inst,sel,step,techs,s,L,title){const X=sel==='_all'?null
  const tone=inst==='guitar'?`<div class="pickrow stone"><span class="eyebrow">Sound</span>${pillsHTML('stone',GTONES,songTone(s,L,title),'pills')}<span class="hint">Suggested for this song: ${esc((GTONES.find(g=>g[0]===songToneSuggest(L,title))||['', ''])[1])}</span></div>`:'';
  return`<section class="panel slesson"><div class="row" style="justify-content:space-between;align-items:baseline"><h3>${sel==='_all'?'Song workout':'Lesson: '+esc(T.name)}</h3><span class="hint">Original exercises in the style, not the song itself</span></div>
   ${X?`<div class="lgrid"><div><h4>How to play it</h4><ol>${X.how.map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div><div><h4>Watch out for</h4><ul>${X.mist.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></div>
-  <div class="pills lsteps" role="tablist">${steps.map(([k,n,t])=>`<button class="pill" data-step="${k}" aria-pressed="${k===cur[0]}">${n} · ${esc(t)}</button>`).join('')}</div><p class="hint lsdesc">${esc(cur[3])}</p>`:''}
+  <div class="pills lsteps" role="group" aria-label="Steps">${steps.map(([k,n,t])=>`<button class="pill" data-step="${k}" aria-pressed="${k===cur[0]}">${n} · ${esc(t)}</button>`).join('')}</div><p class="hint lsdesc">${esc(cur[3])}</p>`:''}
   ${sel==='_all'?`<p class="hint">Every technique from this song back to back: ${W.map(k=>esc(techLabel(inst,k))).join(', ')}. Get each one clean on its own first.</p>`:''}
   ${tone}<div id="player" class="stack"></div>
   ${next?`<div class="row" style="justify-content:flex-end"><button class="btn primary" ${next[0]==='step'?`data-step="${next[1]}"`:`data-t="${next[1]}"`}>Next: ${esc(next[2])} ›</button></div>`:''}</section>`}
@@ -8758,7 +8779,7 @@ function vsProgressHTML(){const H=store.get('svrangeh',[])||[];const W=store.get
 const VS_TABS=[['workout','Daily workout'],['range','Range'],['sustain','Hold & vibrato'],['breath','Breath'],['dynamics','Swell & fade'],['sight','Sight-singing'],['health','Voice health'],['progress','Progress']];
 function viewVoice(tab){tab=VS_TABS.some(t=>t[0]===tab)?tab:(store.get('vstab','workout'));store.set('vstab',tab);const r=vsRange();
  main.innerHTML=`<div class="pagehead"><div class="stack" style="gap:6px"><span class="eyebrow">Voice studio</span><h1>Train your voice</h1><p class="lede">A daily routine built on voice science, with live pitch feedback, all placed inside your own range${r?` (${svName(r.lo)} to ${svName(r.hi)})`:''}.</p></div>${r?'':'<a class="btn primary" href="#voice-range">Find your range first</a>'}</div>
- <div class="vstabs" role="tablist">${VS_TABS.map(([k,n])=>`<a role="tab" aria-selected="${k===tab}" class="pill" aria-pressed="${k===tab}" href="#voice-${k}">${n}</a>`).join('')}</div><div class="stack vsbody"></div>`;
+ <nav class="vstabs" aria-label="Voice studio">${VS_TABS.map(([k,n])=>`<a class="pill" ${k===tab?'aria-current="page"':''} href="#voice-${k}">${n}</a>`).join('')}</nav><div class="stack vsbody"></div>`;
  const b=main.querySelector('.vsbody');const panel=f=>{const s=document.createElement('section');s.className='panel stack';b.appendChild(s);f(s);return s};
  if(tab==='workout'){const f=vsHealthToday();if(!f){b.insertAdjacentHTML('beforeend',`<section class="panel"><h3>First, how does your voice feel?</h3><div class="row vsfeel">${VS_FEEL.map(([k,n])=>`<button class="pill" data-feel="${k}">${n}</button>`).join('')}</div><p class="hint">The workout adjusts to it.</p></section>`);vsWireHealth(b,()=>viewVoice('workout'));return}const d=document.createElement('div');d.className='stack';b.appendChild(d);vsWorkout(d)}
  else if(tab==='range')panel(vsRangeWidget);else if(tab==='sustain')panel(vsSustainWidget);else if(tab==='breath')panel(vsBreathWidget);else if(tab==='dynamics')panel(vsDynWidget);else if(tab==='sight')panel(vsSightWidget);
@@ -8819,7 +8840,7 @@ async function wikiSongs(name,inst,onStatus){if(!navigator.onLine)throw{code:'of
 Object.assign(window,{wikiSinglesFrom,wikiSongs,roadForStyle});
 Object.assign(window,{vsTestMic:()=>inputStart(null),vsTestMidi:()=>svMidiNow(),viewVoice,vsAnalyse,vsSetRange,vsRange,vsZone,vsUpDown,vsMelody,vsDeg,vsSustainAdvice,vsGuessType,svGlide,VS_WORK});
 
-/* ================= v45: song transcriber — the background worker (stem separation and transcription) ================= */
+/* ================= v45/v46: song transcriber — the background worker (stem separation and transcription) ================= */
 function tsWorkerMain(){
  const post=(o,tr)=>self.postMessage(o,tr||[]);
  /* radix-2 FFT, in place */
@@ -8829,53 +8850,95 @@ function tsWorkerMain(){
  function resample(x,sr,to){if(sr===to)return x;const r=sr/to,n=Math.floor(x.length/r),y=new Float32Array(n);const k=Math.max(1,Math.round(r));for(let i=0;i<n;i++){const p=i*r,i0=Math.floor(p);let s=0,c=0;for(let j=-k+1;j<=k-1;j++){const q=i0+j;if(q>=0&&q<x.length){const w=k-Math.abs(j);s+=x[q]*w;c+=w}}y[i]=c?s/c:0}return y}
  const MS=new Float32Array(64);const med=(a,n)=>{for(let i=0;i<n;i++){const v=a[i];let j=i-1;while(j>=0&&MS[j]>v){MS[j+1]=MS[j];j--}MS[j+1]=v}return MS[n>>1]};
  /* --- separation: one streaming pass of short-time Fourier transforms --- */
- function separate(L,R,sr,part,prog){const N=2048,H=512,B=N/2+1,K=17,hk=K>>1;const n=L.length;const nf=Math.ceil(n/H)+1;
+ function separate(L,R,sr,part,prog,opt={}){const N=2048,H=512,B=N/2+1,K=17,hk=K>>1;const n=L.length;const nf=Math.ceil(n/H)+1;
   const win=new Float32Array(N);for(let i=0;i<N;i++)win[i]=.5-.5*Math.cos(2*Math.PI*i/N);
   const stem=new Float32Array(n+N),rest=new Float32Array(n+N),wsum=new Float32Array(n+N);
   const ringL=[],ringR=[],ringM=[];for(let i=0;i<K;i++){ringL.push([new Float32Array(B),new Float32Array(B)]);ringR.push([new Float32Array(B),new Float32Array(B)]);ringM.push(new Float32Array(B))}
   const re=new Float32Array(N),im=new Float32Array(N),re2=new Float32Array(N),im2=new Float32Array(N);const col=new Float32Array(K),fr=new Float32Array(K);
   const hz=k=>k*sr/N;const sm=(x,a,b)=>x<=a?0:x>=b?1:(x-a)/(b-a);
-  const FEAT={flux:new Float32Array(nf),sflux:new Float32Array(nf),chroma:[],bchroma:[],low:new Float32Array(nf),mid:new Float32Array(nf),high:new Float32Array(nf),rms:new Float32Array(nf)};
-  let prevMag=null,prevStem=null;
+  const FEAT={flux:new Float32Array(nf),sflux:new Float32Array(nf),chroma:[],bchroma:[],low:new Float32Array(nf),mid:new Float32Array(nf),high:new Float32Array(nf),rms:new Float32Array(nf),bands:[],flatM:new Float32Array(nf),flatH:new Float32Array(nf)};
+  let prevMag=null,prevStem=null;const SAL=[];
   const frameIn=f=>{const o=f*H-N/2;const sl=ringL[f%K],sr_=ringR[f%K];for(let i=0;i<N;i++){const j=o+i;re[i]=j>=0&&j<n?L[j]*win[i]:0;im[i]=0;re2[i]=j>=0&&j<n?R[j]*win[i]:0;im2[i]=0}fft(re,im,false);fft(re2,im2,false);
    const m=ringM[f%K];for(let k=0;k<B;k++){sl[0][k]=re[k];sl[1][k]=im[k];sr_[0][k]=re2[k];sr_[1][k]=im2[k];const mr=(re[k]+re2[k])/2,mi=(im[k]+im2[k])/2;m[k]=Math.hypot(mr,mi)}};
   const process=c=>{const sl=ringL[c%K],sr_=ringR[c%K],Mm=ringM[c%K];const avail=Math.min(K,nf);
    const outR=new Float32Array(N),outI=new Float32Array(N),resR=new Float32Array(N),resI=new Float32Array(N);let flux=0,sflux=0,lo=0,mi=0,hi=0;const ch=new Float32Array(12),bch=new Float32Array(12);
-   const stemMag=new Float32Array(B);
+   const stemMag=new Float32Array(B);const hm_=new Float32Array(B);const bd=new Float32Array(5);let fmL=0,fmA=0,fmN=0,fhL=0,fhA=0,fhN=0;
    for(let k=0;k<B;k++){/* harmonic: median over time; percussive: median over frequency */
-    for(let t=0;t<avail;t++)col[t]=ringM[t][k];const Hm=med(col,avail);let q=0;for(let d=-hk;d<=hk;d++){const kk=k+d;if(kk>=0&&kk<B)fr[q++]=Mm[kk]}const Pm=med(fr,q);
+    if(VX.hw&&part==='vocals'){const w=VX.hw;for(let t=0;t<avail;t++){const R=ringM[t];let m=0;for(let q=Math.max(0,k-w);q<=Math.min(B-1,k+w);q++)if(R[q]>m)m=R[q];col[t]=m}}else for(let t=0;t<avail;t++)col[t]=ringM[t][k];const Hm=med(col,avail);let q=0;for(let d=-hk;d<=hk;d++){const kk=k+d;if(kk>=0&&kk<B)fr[q++]=Mm[kk]}const Pm=med(fr,q);
     const h2=Hm*Hm,p2=Pm*Pm,den=h2+p2+1e-12;const mh=h2/den,mp=p2/den;
     const lr=sl[0][k],li=sl[1][k],rr=sr_[0][k],ri=sr_[1][k];const dl=Math.hypot(lr-rr,li-ri),sa=Math.hypot(lr,li)+Math.hypot(rr,ri)+1e-9;let cen=1-dl/sa;cen=cen<0?0:cen;cen=cen*cen*cen*cen;
     const f=hz(k);const bassW=1-sm(f,180,320);const vband=sm(f,150,240)*(1-sm(f,6000,9000));
-    let mask;if(part==='vocals')mask=mh*cen*vband*(1-bassW*.85);else if(part==='drums')mask=mp*(1-sm(f,12000,16000)*.3);else if(part==='bass')mask=mh*bassW*(1-sm(f,20,35)*0)*sm(f,25,40);else mask=mh*(1-bassW)*(1-cen*vband*.9);
+    let mask;if(part==='vocals'){mask=mh*Math.pow(cen,VX.cp)*vband*(1-bassW*.85);/* take out the bass line's overtones, which sit in the middle like the voice */const bf=opt.bassF0&&opt.bassF0[c];if(bf&&f<2500){const h=Math.round(f/bf);if(h>=1){const w=Math.max(bf*.03,sr/N*VX.nw);const dd=(f-h*bf)/w;mask*=1-VX.nd*Math.exp(-dd*dd)}}}else if(part==='drums')mask=mp*(1-sm(f,12000,16000)*.3);else if(part==='bass')mask=Math.pow(mh,VX.bp)*bassW*(1-sm(f,20,35)*0)*sm(f,25,40);else mask=mh*(1-bassW)*(1-cen*vband*.9);
     const mr=(lr+rr)/2,mii=(li+ri)/2;outR[k]=mr*mask;outI[k]=mii*mask;resR[k]=mr*(1-mask);resI[k]=mii*(1-mask);if(k>0&&k<N/2){outR[N-k]=outR[k];outI[N-k]=-outI[k];resR[N-k]=resR[k];resI[N-k]=-resI[k]}
     const smag=Math.hypot(outR[k],outI[k]);stemMag[k]=smag;
     if(prevMag){const d=Math.log1p(Mm[k]*10)-Math.log1p(prevMag[k]*10);if(d>0)flux+=d}if(prevStem){const d=Math.log1p(smag*10)-Math.log1p(prevStem[k]*10);if(d>0)sflux+=d}
-    const pm=Pm*mp;if(f>30&&f<150)lo+=pm;else if(f>=150&&f<2500)mi+=pm;else if(f>=5000)hi+=pm;
-    if(f>55&&f<2000){const pc=((Math.round(12*Math.log2(f/440))+69)%12+12)%12;const w=part==='other'||part==='vocals'?smag:Mm[k]*mh;ch[pc]+=w*w;if(f<260)bch[pc]+=Mm[k]*mh*Mm[k]*mh}}
-   prevMag=Mm.slice();prevStem=stemMag;FEAT.flux[c]=flux;FEAT.sflux[c]=sflux;FEAT.low[c]=lo;FEAT.mid[c]=mi;FEAT.high[c]=hi;FEAT.chroma.push(ch);FEAT.bchroma.push(bch);
+    const pm=Pm*mp;const pq=Pm>DR.marg*Hm?Mm[k]:0;if(f>30)bd[f<150?0:f<400?1:f<2500?2:f<5000?3:4]+=pq*pq;if(prevMag&&f>=400&&f<10000){const dd=Math.max(0,Mm[k]-prevMag[k])+1e-7;if(f<5000){fmL+=Math.log(dd);fmA+=dd;fmN++}else{fhL+=Math.log(dd);fhA+=dd;fhN++}}if(f>30&&f<150)lo+=pm;else if(f>=150&&f<2500)mi+=pm;else if(f>=5000)hi+=pm;
+    if(!CH.peaks&&f>55&&f<2000){const pc=((Math.round(12*Math.log2(f/440))+69)%12+12)%12;const w=CH.src===2?Mm[k]*mh:part==='other'||part==='vocals'?smag:Mm[k]*mh;ch[pc]+=CH.pw===1?w:w*w;if(f<260)bch[pc]+=Mm[k]*mh*Mm[k]*mh}hm_[k]=Mm[k]*mh}
+   if(CH.peaks){/* chroma from spectral peaks at their exact pitch, so a low E isn't counted as an F */const pkc=(X,lo,hi,acc,sq)=>{for(let k=2;k<B-1;k++){const f=hz(k);if(f<lo||f>hi)continue;const v=X[k];if(!(v>X[k-1]&&v>=X[k+1]&&v>0))continue;const a=Math.log(X[k-1]+1e-9),b=Math.log(v),cc=Math.log(X[k+1]+1e-9),dn=a+cc-2*b;const off=dn?(a-cc)/(2*dn):0;const p=12*Math.log2((k+off)*sr/N/440)+69;const pr=Math.round(p);const w=1-Math.min(1,Math.abs(p-pr)*2*CH.dw);const pc=((pr%12)+12)%12;acc[pc]+=(sq?v*v:v)*w}};
+    pkc(part==='other'||part==='vocals'?stemMag:hm_,55,2000,ch,CH.pw!==1);pkc(hm_,30,260,bch,true)}
+   if(opt.sal){/* melody salience: add up each candidate pitch's harmonics in the separated part */const sq=new Float32Array(B);for(let k=0;k<B;k++)sq[k]=Math.sqrt(stemMag[k]);const at=f=>{const x=f*N/sr;const i=Math.floor(x);if(i+1>=B)return 0;const fr=x-i;return Math.max(sq[i]*(1-fr)+sq[i+1]*fr,fr<.5?sq[i]:sq[i+1])};
+    const R0=opt.sal[0],R1=opt.sal[1];const sal=[];for(let m=R0;m<=R1;m+=.2){const f0=440*Math.pow(2,(m-69)/12);let v=0,w=1;for(let h=1;h<=(opt.sal[2]||VX.nh);h++){const fh=f0*h;if(fh>5000)break;v+=w*at(fh);w*=(opt.sal[3]||VX.hd)}sal.push(v)}
+    const pk=[];for(let i=1;i<sal.length-1;i++)if(sal[i]>sal[i-1]&&sal[i]>=sal[i+1])pk.push(i);pk.sort((a,b)=>sal[b]-sal[a]);
+    SAL.push({t:c*H/sr,cs:pk.slice(0,4).map(i=>{const a=sal[i-1],b=sal[i],cc=sal[i+1],dn=a+cc-2*b;const off=dn?(a-cc)/(2*dn):0;return{m:R0+(i+off)*.2,s:b}})})}
+   prevMag=Mm.slice();prevStem=stemMag;FEAT.flux[c]=flux;FEAT.sflux[c]=sflux;FEAT.low[c]=lo;FEAT.mid[c]=mi;FEAT.high[c]=hi;FEAT.chroma.push(ch);FEAT.bands.push(bd);FEAT.flatM[c]=fmN?Math.exp(fmL/fmN)/(fmA/fmN):0;FEAT.flatH[c]=fhN?Math.exp(fhL/fhN)/(fhA/fhN):0;FEAT.bchroma.push(bch);
    fft(outR,outI,true);fft(resR,resI,true);const o=c*H-N/2;let e=0;for(let i=0;i<N;i++){const j=o+i;if(j<0||j>=n)continue;stem[j]+=outR[i]*win[i];rest[j]+=resR[i]*win[i];wsum[j]+=win[i]*win[i];e+=outR[i]*outR[i]}FEAT.rms[c]=Math.sqrt(e/N)};
   for(let f=0;f<nf+hk;f++){if(f<nf)frameIn(f);const c=f-hk;if(c>=0&&c<nf)process(c);if(f%200===0)prog(f/(nf+hk))}
   for(let i=0;i<n;i++){const w=wsum[i]>1e-6?wsum[i]:1;stem[i]/=w;rest[i]/=w}
-  return{stem:stem.subarray(0,n),rest:rest.subarray(0,n),F:FEAT,H,N}}
+  return{stem:stem.subarray(0,n),rest:rest.subarray(0,n),F:FEAT,H,N,SAL}}
+ /* the bass line's pitch, frame by frame, from a low-passed mix (used to keep it out of the vocals) */
+ function bassTrack(l,r,sr){const n=l.length,x=new Float32Array(n);let a=0,b=0;const k=1-Math.exp(-2*Math.PI*260/sr);for(let i=0;i<n;i++){const v=(l[i]+r[i])/2;a+=(v-a)*k;b+=(a-b)*k;x[i]=b}
+  const P=yinDs(x,sr,512,1536,35,330,8);const nf=Math.ceil(n/512)+1,out=new Float32Array(nf);const mx=Math.max(1e-9,...P.map(p=>p.r));P.forEach(p=>{if(p.f>0&&p.c>.7&&p.r>mx*.05){const c=Math.round(p.t*sr/512);if(c>=0&&c<nf)out[c]=p.f}});return out}
+ const VX=Object.assign({nd:.5,nw:1.8,cp:1,fmin:120,hw:2,sal:1,nh:8,hd:.85,bsal:1,bp:2,bnh:5,bhd:.6},self.VXO||{});
+ function backbeat(F,fps){const n=F.bands.length;if(n<fps*6)return 0;const nv=bs=>{const x=new Float32Array(n);for(let i=2;i<n;i++){const v=bs.reduce((a,b)=>a+Math.sqrt(F.bands[i][b]),0),p=Math.max(...[1,2].map(q=>bs.reduce((a,b)=>a+Math.sqrt(F.bands[i-q][b]),0)));x[i]=Math.max(0,v-p)}let m=0;for(let i=0;i<n;i++)m=Math.max(m,x[i]);if(m>0)for(let i=0;i<n;i++)x[i]/=m;
+   const y=new Float32Array(n);for(let i=0;i<n;i++){let s=0,c=0;for(let j=-2;j<=2;j++){const k=i+j;if(k>=0&&k<n){const w=3-Math.abs(j);s+=x[k]*w;c+=w}}y[i]=s/c}return y};
+  const hs=drums(F,fps);const imp=k=>{const x=new Float32Array(n);hs.forEach(h=>{if(h.k!==k)return;const c=Math.round((h.t-DR.off)*fps);for(let j=-2;j<=2;j++){const q=c+j;if(q>=0&&q<n)x[q]=Math.max(x[q],(3-Math.abs(j))/3*Math.pow(Math.max(0,(h.v-55)/65),2))}});return x};const sn=imp('snare'),kk=imp('kick');const xc=(a,b,lag)=>{let s=0;const L=Math.round(lag);for(let i=Math.max(0,-L);i<n&&i+L<n;i++)if(i+L>=0)s+=a[i]*b[i+L];return s};
+  let best=0,Ps=0;const AC=[];for(let lag=Math.round(.6*fps);lag<=Math.round(2.6*fps);lag++){const v=xc(sn,sn,lag);AC.push([lag,v]);if(v>best){best=v;Ps=lag}}if(!Ps)return 0;/* the shortest strong period, not a multiple of it */for(const [lag,v] of AC){if(v>=best*.85){let pk=true;for(const [l2,v2] of AC)if(Math.abs(l2-lag)<=2&&v2>v)pk=false;if(pk){Ps=lag;best=v;break}}}
+  const self0=xc(sn,sn,0),half=xc(sn,sn,Ps/2),kickBetween=xc(kk,sn,Ps/2),kickOn=xc(kk,sn,0),kk0=xc(kk,kk,0);
+  BBDBG&&(BBDBG.v={Ps:Ps/fps,per:best/self0,half:half/best,kb:kickBetween/Math.sqrt(self0*kk0),ko:kickOn/Math.sqrt(self0*kk0)});
+  if(best/self0>BB.per&&half<best*BB.half&&kickBetween>kickOn*BB.kb){const bpm=120*fps/Ps;if(bpm>=58&&bpm<=200)return Ps/2}return 0}
+ const BB=Object.assign({per:.3,half:.6,kb:1.2},self.BBO||{});let BBDBG=self.BBD||null;
  /* --- tempo and beats (Ellis dynamic-programming beat tracker) --- */
- function beats(flux,fps){const n=flux.length;const env=new Float32Array(n);let mx=0;for(let i=0;i<n;i++){let s=0,c=0;for(let j=Math.max(0,i-8);j<=Math.min(n-1,i+8);j++){s+=flux[j];c++}env[i]=Math.max(0,flux[i]-s/c);if(env[i]>mx)mx=env[i]}if(mx>0)for(let i=0;i<n;i++)env[i]/=mx;
+ function beats(flux,fps,F){const n=flux.length;const env=new Float32Array(n);let mx=0;for(let i=0;i<n;i++){let s=0,c=0;for(let j=Math.max(0,i-8);j<=Math.min(n-1,i+8);j++){s+=flux[j];c++}env[i]=Math.max(0,flux[i]-s/c);if(env[i]>mx)mx=env[i]}if(mx>0)for(let i=0;i<n;i++)env[i]/=mx;
   /* a smoothed copy for tempo: kick and snare onsets are found a few frames apart from where they really are, so allow some slack */const es=new Float32Array(n);for(let i=0;i<n;i++){let s=0,c=0;for(let j=-3;j<=3;j++){const k=i+j;if(k<0||k>=n)continue;const w=4-Math.abs(j);s+=env[k]*w;c+=w}es[i]=s/c}
   let best=0,bl=0;for(let bpm=60;bpm<=190;bpm+=.5){const lag=60*fps/bpm;let s=0;for(let i=Math.ceil(lag);i<n;i++){const a=i-lag,a0=Math.floor(a),fr=a-a0;s+=es[i]*(es[a0]*(1-fr)+(es[a0+1]||0)*fr)}const w=Math.exp(-.5*Math.pow(Math.log2(bpm/110)/1.1,2));s*=w;if(s>best){best=s;bl=lag}}
   const acf=lag=>{let s=0;for(let i=Math.ceil(lag);i<n;i++){const a=i-lag,a0=Math.floor(a),fr=a-a0;s+=es[i]*(es[a0]*(1-fr)+(es[a0+1]||0)*fr)}return s};
-  let lagB=bl||fps*60/100;const bpm0=60*fps/lagB;if(bpm0<=95&&acf(lagB/2)>acf(lagB)*.4)lagB/=2;else if(bpm0>175)lagB*=2;const P=lagB;const sc=new Float32Array(n),bk=new Int32Array(n).fill(-1);for(let i=0;i<n;i++){let m=0,mi=-1;for(let j=Math.round(i-2*P);j<=Math.round(i-P/2);j++){if(j<0)continue;const v=sc[j]-100*Math.pow(Math.log((i-j)/P),2);if(v>m||mi<0&&j>=0){m=v;mi=j}}sc[i]=env[i]+(mi>=0?Math.max(0,m):0);bk[i]=mi}
+  let lagB=bl||fps*60/100;const bb=F?backbeat(F,fps):0;
+  if(bb){/* a snare backbeat with the kick in between fixes the beat level: the beat is half the snare's period */let b2=0,l2=bb;for(let f=.94;f<=1.06;f+=.005){const v=acf(bb*f);if(v>b2){b2=v;l2=bb*f}}lagB=l2}
+  else{const bpm0=60*fps/lagB;if(bpm0<=95&&acf(lagB/2)>acf(lagB)*.4)lagB/=2;else if(bpm0>175)lagB*=2}const P=lagB;const sc=new Float32Array(n),bk=new Int32Array(n).fill(-1);for(let i=0;i<n;i++){let m=0,mi=-1;for(let j=Math.round(i-2*P);j<=Math.round(i-P/2);j++){if(j<0)continue;const v=sc[j]-100*Math.pow(Math.log((i-j)/P),2);if(v>m||mi<0&&j>=0){m=v;mi=j}}sc[i]=env[i]+(mi>=0?Math.max(0,m):0);bk[i]=mi}
   let e=n-1,bm=-1;for(let i=n-1;i>=Math.max(0,n-Math.round(P*2));i--)if(sc[i]>bm){bm=sc[i];e=i}const out=[];while(e>=0){out.push(e);e=bk[e]}out.reverse();
   /* report the tempo the tracked beats actually keep (median gap) */const gaps=[];for(let i=1;i<out.length;i++)gaps.push(out[i]-out[i-1]);gaps.sort((a,b)=>a-b);const g=gaps.length>4?gaps.slice(Math.floor(gaps.length*.25),Math.ceil(gaps.length*.75)):gaps;const mg=g.length?g.reduce((a,b)=>a+b,0)/g.length:P;
   return{bpm:Math.round(60*fps/mg*10)/10,beats:out.map(i=>i/fps)}}
  /* --- pitch (YIN) on the separated part --- */
  function yinDs(x,sr,hop,W,fmin,fmax,ds){const y=resample(x,sr,sr/ds);return yin(y,sr/ds,Math.max(1,Math.round(hop/ds)),Math.round(W/ds),fmin,fmax)}
  function yin(x,sr,hop,W,fmin,fmax){const out=[];const d=new Float32Array(W);const minT=Math.floor(sr/fmax),maxT=Math.min(W-1,Math.floor(sr/fmin));
-  for(let s=0;s+2*W<x.length;s+=hop){let e=0;for(let i=0;i<W;i++)e+=x[s+i]*x[s+i];const rms=Math.sqrt(e/W);if(rms<1e-4){out.push({t:(s+W/2)/sr,f:0,c:0,r:rms});continue}
+  for(let s=0;s+2*W<x.length;s+=hop){let e=0;for(let i=0;i<W;i++)e+=x[s+i]*x[s+i];const rms=Math.sqrt(e/W);if(rms<1e-4){out.push({t:(s+W/2)/sr,f:0,c:0,r:rms,cs:[]});continue}
    d[0]=1;let run=0;let T=-1;for(let t=1;t<=maxT;t++){let v=0;for(let i=0;i<W;i++){const df=x[s+i]-x[s+i+t];v+=df*df}run+=v;d[t]=run?v*t/run:1;if(t>=minT&&T<0&&d[t]<.15){T=t}if(T>0&&t>T&&d[t]>d[t-1]){break}}
-   if(T<0){let b=1e9;for(let t=minT;t<=maxT;t++)if(d[t]<b){b=d[t];T=t}if(b>.4){out.push({t:(s+W/2)/sr,f:0,c:0,r:rms});continue}}else{while(T+1<=maxT&&d[T+1]<d[T])T++}
+   if(T<0){let b=1e9;for(let t=minT;t<=maxT;t++)if(d[t]<b){b=d[t];T=t}if(b>.4&&!NX.cands){out.push({t:(s+W/2)/sr,f:0,c:0,r:rms,cs:[]});continue}if(b>.4){/* nothing clear: keep weak candidates for the tracker */const cs=[];for(let q=minT+1;q<maxT;q++)if(d[q]<d[q-1]&&d[q]<=d[q+1]&&d[q]<.7)cs.push({f:sr/q,c:1-d[q]});cs.sort((x,y)=>y.c-x.c);out.push({t:(s+W/2)/sr,f:0,c:0,r:rms,cs:cs.slice(0,3)});continue}}else{while(T+1<=maxT&&d[T+1]<d[T])T++}
    for(let g=0;g<2;g++){const h=Math.round(T/2);if(h>=minT){let hb=h;for(let q=h-2;q<=h+2;q++)if(q>=minT&&q<=maxT&&d[q]<d[hb])hb=q;if(d[hb]<d[T]+.12)T=hb;else break}else break}
-   const a=d[T-1]||d[T],b=d[T],c=d[T+1]||d[T];const den=a+c-2*b;const tt=den?T+(a-c)/(2*den):T;out.push({t:(s+W/2)/sr,f:sr/tt,c:1-b,r:rms})}return out}
- function notesFrom(P,onsets,minDur,RANGE=[24,100]){const mx=Math.max(1e-6,...P.map(p=>p.r));const v=P.map(p=>p.f>0&&p.c>.6&&p.r>mx*.04?69+12*Math.log2(p.f/440):null);
+   const a=d[T-1]||d[T],b=d[T],c=d[T+1]||d[T];const den=a+c-2*b;const tt=den?T+(a-c)/(2*den):T;
+   /* other likely pitches (dips in the difference function), so the note tracker can choose a smooth line */const cs=[{f:sr/tt,c:1-b}];if(NX.cands){const dips=[];for(let q=minT+1;q<maxT;q++)if(d[q]<d[q-1]&&d[q]<=d[q+1]&&d[q]<.6&&Math.abs(q-T)>2){const a2=d[q-1],c2=d[q+1],dn=a2+c2-2*d[q];dips.push({f:sr/(dn?q+(a2-c2)/(2*dn):q),c:1-d[q]})}dips.sort((x,y)=>y.c-x.c).slice(0,3).forEach(x=>cs.push(x))}
+   out.push({t:(s+W/2)/sr,f:sr/tt,c:1-b,r:rms,cs})}return out}
+ const NX=Object.assign({snapK:.1,vsh:.015,obB:1.2,raB:1.15,obV:1.5,dip:.5,dip2:.75,raV:1.8,ra:1.8,cands:1,v:1,eOff:.8,tJ:.9,tS:.08,tO:.6,lo:.04,hy:.62,minF:3},self.NXO||{});
+ /* note tracking: choose the smoothest likely pitch line through all frames (Viterbi), then cut it into notes */
+ function notesV(P,onsets,minDur,RANGE){const n=P.length;if(!n)return[];const mx=Math.max(1e-6,...P.map(p=>p.r));const ST=P.map(p=>{const c=(p.cs||[]).map(x=>({m:69+12*Math.log2(x.f/440),c:x.c})).filter(x=>x.m>=RANGE[0]-.5&&x.m<=RANGE[1]+.5);return c});
+  const INF=1e9;let prev=[0],prevS=[null];const back=[];
+  for(let i=0;i<n;i++){const quiet=P[i].r<mx*NX.lo;const st=[null,...ST[i]];const em=st.map(x=>x==null?(quiet?0:NX.eOff*(ST[i].length?Math.max(...ST[i].map(y=>y.c)):0)):(quiet?1:0)+(1-x.c));
+   const cur=new Array(st.length).fill(INF),bk=new Array(st.length).fill(0);
+   for(let a=0;a<prevS.length;a++){const pa=prevS[a];for(let b=0;b<st.length;b++){const pb=st[b];let tc;if(pa==null&&pb==null)tc=0;else if(pa==null||pb==null)tc=NX.tO;else{const dm=Math.abs(pa.m-pb.m);tc=dm<.6?NX.tS*dm:NX.tJ+NX.tS*Math.min(dm,12)}const v=prev[a]+tc+em[b];if(v<cur[b]){cur[b]=v;bk[b]=a}}}
+   back.push({st,bk});prev=cur;prevS=st}
+  let bi=0;for(let b=1;b<prev.length;b++)if(prev[b]<prev[bi])bi=b;const line=new Array(n),lc=new Float32Array(n);for(let i=n-1;i>=0;i--){const x=back[i].st[bi];line[i]=x?x.m:null;lc[i]=x?x.c:0;bi=back[i].bk[bi]}
+  /* cut into notes: round with hysteresis, and start a new note on a clear re-attack */
+  const on=new Set(onsets.map(t=>Math.round(t*50)));const notes=[];let cur=null,pend=null,pc=0;
+  for(let i=0;i<n;i++){const x=line[i],t=P[i].t;if(x==null){if(cur){cur.e=t;notes.push(cur);cur=null}pend=null;pc=0;continue}
+   if(!cur){cur={t,e:t,m:Math.round(x),r:P[i].r,sum:x,k:1};continue}
+   const lo3=Math.min(...[1,2,3].map(q=>P[i-q]?P[i-q].r:1e9));const reat=(on.has(Math.round(t*50))&&t-cur.t>.09&&P[i].r>lo3*NX.ra)||(NX.dip&&t-cur.t>.09&&cur.mc>0&&Math.min(lc[i-1],lc[i-2]||1)<cur.mc*NX.dip&&lc[i]>cur.mc*NX.dip2&&lc[i]>lc[i-1]);
+   if(Math.abs(x-cur.m)>NX.hy){const mm=Math.round(x);if(pend===mm)pc++;else{pend=mm;pc=1}if(pc>=NX.minF){/* the new note began when the pitch first moved */const st0=P[i-pc+1].t;cur.e=st0;notes.push(cur);cur={t:st0,e:t,m:mm,r:P[i].r,sum:x,k:1};pend=null;pc=0}continue}
+   pend=null;pc=0;if(reat){cur.e=t;notes.push(cur);cur={t,e:t,m:Math.round(x),r:P[i].r,sum:x,k:1};continue}cur.e=t;cur.r=Math.max(cur.r,P[i].r);cur.mc=Math.max(cur.mc||0,lc[i])}
+  if(cur)notes.push(cur);const rm=Math.max(1e-6,...notes.map(x=>x.r));
+  return notes.filter(x=>x.e-x.t>=minDur&&x.m>=RANGE[0]&&x.m<=RANGE[1]).map(x=>({t:+x.t.toFixed(3),d:+Math.max(.06,x.e-x.t).toFixed(3),m:x.m,v:Math.round(50+70*Math.min(1,x.r/rm))}))}
+ function salFrames(S,sr){const all=[];S.SAL.forEach(f=>f.cs.forEach(c=>all.push(c.s)));all.sort((a,b)=>a-b);const ref=all[Math.floor(all.length*.97)]||1;
+  return S.SAL.map((f,i)=>({t:f.t,r:S.F.rms[i]||0,f:0,c:0,cs:f.cs.map(c=>({f:440*Math.pow(2,(c.m-69)/12),c:Math.min(1,c.s/ref)}))}))}
+ function notesFrom(P,onsets,minDur,RANGE=[24,100]){if(NX.v)return notesV(P,onsets,minDur,RANGE);const mx=Math.max(1e-6,...P.map(p=>p.r));const v=P.map(p=>p.f>0&&p.c>.6&&p.r>mx*.04?69+12*Math.log2(p.f/440):null);
   const m=v.map((x,i)=>{if(x==null)return null;const w=[];for(let j=i-2;j<=i+2;j++)if(v[j]!=null)w.push(v[j]);w.sort((a,b)=>a-b);return Math.round(w[w.length>>1])});
   const notes=[];let cur=null;const on=new Set(onsets.map(t=>Math.round(t*50)));
   P.forEach((p,i)=>{const x=m[i];const lo3=Math.min(...[1,2,3].map(q=>P[i-q]?P[i-q].r:1e9));const split=cur&&on.has(Math.round(p.t*50))&&p.t-cur.t>.09&&p.r>lo3*1.35;if(x==null||!cur||x!==cur.m||split){if(cur&&cur.e-cur.t>=minDur)notes.push(cur);cur=x==null?null:{t:p.t,e:p.t,m:x,r:p.r}}else{cur.e=p.t;cur.r=Math.max(cur.r,p.r)}});if(cur&&cur.e-cur.t>=minDur)notes.push(cur);
@@ -8883,25 +8946,37 @@ function tsWorkerMain(){
   const rm=Math.max(1e-6,...merged.map(x=>x.r));return merged.filter(x=>x.m>=(RANGE[0])&&x.m<=RANGE[1]).map(x=>({t:+x.t.toFixed(3),d:+Math.max(.06,x.e-x.t+.03).toFixed(3),m:x.m,v:Math.round(50+70*Math.min(1,x.r/rm))}))}
  function peaks(x,fps,thr,gap){const out=[];const n=x.length;for(let i=1;i<n-1;i++){let s=0,c=0;for(let j=Math.max(0,i-10);j<=Math.min(n-1,i+10);j++){s+=x[j];c++}const local=s/c;if(x[i]>x[i-1]&&x[i]>=x[i+1]&&x[i]>local*thr&&x[i]>0){const t=i/fps;if(!out.length||t-out[out.length-1]>gap)out.push(t)}}return out}
  /* --- chords from the chroma of the separated part --- */
+ const CH=Object.assign({src:0,pw:1,pen:.3,rb:.2,bb:.3,peaks:1,dw:.8},self.CHO||{});const CH_SC=[],CH_LAB=[];
  const NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];const TPL={maj:[0,4,7],min:[0,3,7],'7':[0,4,7,10],maj7:[0,4,7,11],m7:[0,3,7,10],'5':[0,7],sus4:[0,5,7]};
- function chords(F,fps,bt){const out=[];const B=bt.length>2?bt:[];for(let i=0;i<B.length-1;i++){const a=Math.floor(B[i]*fps),b=Math.max(a+1,Math.floor(B[i+1]*fps));const c=new Float32Array(12),bc=new Float32Array(12);let en=0;for(let f=a;f<b&&f<F.chroma.length;f++){for(let k=0;k<12;k++){c[k]+=F.chroma[f][k];bc[k]+=F.bchroma[f][k];en+=F.chroma[f][k]}}
-   const mx=Math.max(...c);if(!(mx>0)){out.push({t:B[i],d:B[i+1]-B[i],name:'N'});continue}for(let k=0;k<12;k++)c[k]=Math.sqrt(c[k]/mx);const broot=bc.indexOf(Math.max(...bc));let best=-1,bn='N',br=0,bt_='maj';
-   for(let r=0;r<12;r++)for(const t in TPL){const T=TPL[t];let s=0;for(let k=0;k<12;k++){const inn=T.includes((k-r+12)%12);s+=inn?c[k]:-.55*c[k]}s/=T.length;if(t==='5')s*=.85;if(t==='7'||t==='maj7'||t==='m7')s*=.97;if(t==='sus4')s*=.9;if(r===broot&&Math.max(...bc)>0)s+=.08;if(s>best){best=s;br=r;bt_=t}}
+ function chords(F,fps,bt){const out=[];CH_SC.length=0;if(!CH_LAB.length)for(let r=0;r<12;r++)for(const t in TPL)CH_LAB.push([r,t]);const B=bt.length>2?bt:[];for(let i=0;i<B.length-1;i++){const a=Math.floor(B[i]*fps),b=Math.max(a+1,Math.floor(B[i+1]*fps));const c=new Float32Array(12),bc=new Float32Array(12);let en=0;for(let f=a;f<b&&f<F.chroma.length;f++){for(let k=0;k<12;k++){c[k]+=F.chroma[f][k];bc[k]+=F.bchroma[f][k];en+=F.chroma[f][k]}}
+   if(CH.bb){const bm=Math.max(...bc),cm=Math.max(...c);if(bm>0&&cm>0)for(let k=0;k<12;k++)c[k]+=CH.bb*cm*bc[k]/bm}const mx=Math.max(...c);if(!(mx>0)){out.push({t:B[i],d:B[i+1]-B[i],name:'N'});CH_SC.push(new Array(84).fill(0));continue}for(let k=0;k<12;k++)c[k]=Math.sqrt(c[k]/mx);const broot=bc.indexOf(Math.max(...bc));let best=-1,bn='N',br=0,bt_='maj';
+   const scs=[];for(let r=0;r<12;r++)for(const t in TPL){const T=TPL[t];let s=0;for(let k=0;k<12;k++){const inn=T.includes((k-r+12)%12);s+=inn?c[k]:-.55*c[k]}s/=T.length;if(t==='5')s*=.85;if(t==='7'||t==='maj7'||t==='m7')s*=.97;if(t==='sus4')s*=.9;if(r===broot&&Math.max(...bc)>0)s+=CH.rb;scs.push(s);if(s>best){best=s;br=r;bt_=t}}CH_SC.push(scs);
    out.push({t:+B[i].toFixed(3),d:+(B[i+1]-B[i]).toFixed(3),root:br,type:bt_,name:NAMES[br]+(bt_==='maj'?'':bt_==='min'?'m':bt_),en})}
+  if(CH.pen&&out.length>2&&CH_SC.length===out.length){/* smooth: changing chord costs something, so one odd beat doesn't flip it */const K=CH_SC[0].length;let cost=CH_SC[0].map(v=>-v),bk=[];
+   for(let i=1;i<out.length;i++){let bi=0;for(let k=1;k<K;k++)if(cost[k]<cost[bi])bi=k;const nc=new Array(K),b=new Array(K);for(let k=0;k<K;k++){const stay=cost[k],mv=cost[bi]+CH.pen;if(stay<=mv){nc[k]=stay-CH_SC[i][k];b[k]=k}else{nc[k]=mv-CH_SC[i][k];b[k]=bi}}cost=nc;bk.push(b)}
+   let k=0;for(let q=1;q<cost.length;q++)if(cost[q]<cost[k])k=q;for(let i=out.length-1;i>=0;i--){const lab=CH_LAB[k];if(out[i].name!=='N'||out[i].en){out[i].root=lab[0];out[i].type=lab[1];out[i].name=NAMES[lab[0]]+(lab[1]==='maj'?'':lab[1]==='min'?'m':lab[1])}if(i>0)k=bk[i-1][k]}}
   const em=Math.max(1e-9,...out.map(x=>x.en||0));/* quiet beats: a fading chord keeps its name; only near-silence is 'no chord' */let prev=null;out.forEach(x=>{const e=x.en||0;if(e<em*.012||(e<em*.06&&!prev))x.name='N';else if(e<em*.06&&prev){x.name=prev.name;x.root=prev.root;x.type=prev.type}prev=x.name==='N'?null:x});return out}
  /* --- drum hits from the separated drums --- */
- function drums(F,fps){const ons=peaks(F.sflux,fps,1.2,.05);const mL=Math.max(1e-9,...F.low),mM=Math.max(1e-9,...F.mid),mH=Math.max(1e-9,...F.high);const hits=[];
-  ons.forEach(t0=>{const i=Math.round(t0*fps);const t=t0+.035;let lo=0,mi=0,hi=0;for(let j=i;j<Math.min(F.low.length,i+3);j++){lo=Math.max(lo,F.low[j]/mL);mi=Math.max(mi,F.mid[j]/mM);hi=Math.max(hi,F.high[j]/mH)}
-   if(lo>.32&&lo>mi*.8)hits.push({t:+t.toFixed(3),k:'kick',v:Math.round(60+60*Math.min(1,lo))});if(mi>.38&&hi>.12&&mi>=lo*.7)hits.push({t:+t.toFixed(3),k:'snare',v:Math.round(60+60*Math.min(1,mi))});if(hi>.18&&!(mi>.3&&mi>hi*1.6))hits.push({t:+t.toFixed(3),k:'hat',v:Math.round(50+60*Math.min(1,hi))})});return hits}
+ function drums(F,fps){/* each drum is found in its own frequency band, then checked against the others */
+  const n=F.bands.length;const band=(i,b)=>F.bands[i]?Math.sqrt(F.bands[i][b]):0;const sum=(i,bs)=>bs.reduce((s,b)=>s+band(i,b),0);
+  const nov=bs=>{const x=new Float32Array(n);for(let i=2;i<n;i++){const v=sum(i,bs),p=Math.max(sum(i-1,bs),sum(i-2,bs));x[i]=Math.max(0,v-p)}return x};
+  const pk=(x,rel,gap,lf)=>{const c=[];for(let i=1;i<n-1;i++){if(x[i]>x[i-1]&&x[i]>=x[i+1]&&x[i]>0){let s=0,q=0;for(let j=Math.max(0,i-12);j<=Math.min(n-1,i+12);j++){s+=x[j];q++}if(x[i]>s/q*(lf||1.4))c.push(i)}}
+   const vals=c.map(i=>x[i]).sort((a,b)=>a-b);const p95=vals[Math.floor(vals.length*.95)]||0,md=vals[vals.length>>1]||0;const out=[];c.forEach(i=>{if(x[i]>=p95*rel&&(x[i]>=md*(rel>.3?1.3:DR.hm)||x[i]>=p95*DR.top)){if(out.length&&i-out[out.length-1]<gap*fps){if(x[i]>x[out[out.length-1]])out[out.length-1]=i}else out.push(i)}});return{idx:out,p95,md}};
+  const K=nov([0]),Sn=nov(DR.sb),Hh=nov([4]);const kk=pk(K,DR.k,.07),ss=pk(Sn,DR.s,.07),hh=pk(Hh,DR.h,.05,DR.hl);const hits=[];const T=i=>+(i/fps+DR.off).toFixed(3);
+  kk.idx.forEach(i=>{const lo=band(i,0),lm=band(i,1);if(lo>lm*DR.kr)hits.push({t:T(i),k:'kick',v:Math.round(60+60*Math.min(1,K[i]/(kk.p95||1)))})});
+  ss.idx.forEach(i=>hits.push({t:T(i),k:'snare',v:Math.round(60+60*Math.min(1,Sn[i]/(ss.p95||1)))}));
+  hh.idx.forEach(i=>hits.push({t:T(i),k:'hat',v:Math.round(50+60*Math.min(1,Hh[i]/(hh.p95||1)))}));
+  return hits.sort((a,b)=>a.t-b.t)}
+ const DR=Object.assign({k:.3,s:.7,h:.15,kr:1.5,off:0,marg:1,sb:[3,4],hl:1.4,hm:0,top:.7},self.DRO||{});
  self.onmessage=e=>{const{L,R,sr,part}=e.data;try{const TS=22050;post({p:.02,msg:'Preparing the audio…'});const l=resample(L,sr,TS),r=R?resample(R,sr,TS):l;
-  const S=separate(l,r,TS,part,p=>post({p:.05+p*.6,msg:'Separating the '+({vocals:'vocals',drums:'drums',bass:'bass',other:'guitar and keys'}[part])+'…'}));const fps=TS/S.H;
-  post({p:.68,msg:'Finding the beat…'});const BT=beats(S.F.flux,fps);
+  const opt={};if(part==='vocals'){opt.bassF0=bassTrack(l,r,TS);if(VX.sal)opt.sal=[45,86]}if(part==='bass'&&VX.bsal)opt.sal=[26,66,VX.bnh,VX.bhd];const S=separate(l,r,TS,part,opt&&(p=>post({p:.05+p*.6,msg:'Separating the '+({vocals:'vocals',drums:'drums',bass:'bass',other:'guitar and keys'}[part])+'…'})),opt);const fps=TS/S.H;
+  post({p:.68,msg:'Finding the beat…'});const BT=beats(S.F.flux,fps,S.F);
   let notes=[],ch=[],hits=[];
   if(part==='drums'){post({p:.75,msg:'Finding the drum hits…'});hits=drums(S.F,fps)}
-  else{post({p:.72,msg:'Working out the notes…'});const P=part==='bass'?yinDs(S.stem,TS,256,1536,35,400,4):yinDs(S.stem,TS,256,1024,part==='vocals'?75:70,part==='vocals'?1100:1300,2);
-   const ons=peaks(S.F.sflux,fps,1.5,.07);notes=notesFrom(P,ons,part==='bass'?.08:.07,part==='bass'?[23,67]:part==='vocals'?[43,88]:[38,96]);if(part==='bass'){/* a kick drum's low thump is often heard as a short, very low bass note: drop it and let the real note start on time */
-    const mL=Math.max(1e-9,...S.F.low);const kicks=peaks(S.F.low,fps,1.3,.08).filter(t=>S.F.low[Math.round(t*fps)]>mL*.3);
-    const keep=[];notes.forEach((x,i)=>{const nx=notes[i+1];const onK=kicks.some(k=>Math.abs(k-x.t)<.06);if(onK&&x.d<.32&&nx&&nx.m-x.m>=7&&nx.t-(x.t+x.d)<.08){nx.d=+(nx.d+(nx.t-x.t)).toFixed(3);nx.t=x.t;return}keep.push(x)});notes=keep}if(part==='other'){post({p:.9,msg:'Working out the chords…'});ch=chords(S.F,fps,BT.beats)}}
+  else{post({p:.72,msg:'Working out the notes…'});NX.ra=part==='vocals'?NX.raV:NX.raB;const P=(part==='vocals'||part==='bass')&&S.SAL.length?salFrames(S,TS):part==='bass'?yinDs(S.stem,TS,256,1536,35,400,4):yinDs(S.stem,TS,256,1024,part==='vocals'?VX.fmin:70,part==='vocals'?1100:1300,2);
+   const ons=peaks(S.F.sflux,fps,part==='bass'?NX.obB:NX.obV,.07);notes=notesFrom(P,ons,part==='bass'?.08:.07,part==='bass'?[23,67]:part==='vocals'?[43,88]:[38,96]);if(part==='vocals')notes.forEach(x=>{x.t=+Math.max(0,x.t-NX.vsh).toFixed(3)});if(part==='bass'){/* a kick drum's low thump is often heard as a short, very low bass note: drop it and let the real note start on time */
+    const kicks=drums(S.F,fps).filter(h=>h.k==='kick').map(h=>h.t-DR.off);
+    const keep=[];notes.forEach((x,i)=>{const nx=notes[i+1];const onK=kicks.some(k=>Math.abs(k-x.t)<.11);if(onK&&x.d<.32&&nx&&nx.m-x.m>=7&&nx.t-(x.t+x.d)<.08){nx.d=+(nx.d+(nx.t-x.t)).toFixed(3);nx.t=x.t;return}keep.push(x)});notes=keep;/* a bass note that starts with the kick: its true start is the kick, not where the thump fades */if(NX.snapK)notes.forEach(x=>{const k=kicks.filter(k=>k<=x.t-.015&&k>=x.t-NX.snapK).pop();if(k!=null){x.d=+(x.d+x.t-k).toFixed(3);x.t=+k.toFixed(3)}})}if(part==='other'){post({p:.9,msg:'Working out the chords…'});ch=chords(S.F,fps,BT.beats)}}
   post({done:true,stem:S.stem,rest:S.rest,sr:TS,bpm:BT.bpm,beats:BT.beats,notes,chords:ch,hits},[S.stem.buffer,S.rest.buffer])}catch(err){post({error:String(err&&err.message||err)})}};
 }
 
@@ -8933,7 +9008,7 @@ function tsBuildTab(R,part,view){const grid=tsGrid(R.beats);const cols={};const 
  else{const tune=part==='bass'?TS_TUNE.bass:TS_TUNE.guitar;kind=part==='bass'?'bass':'guitar';lines=tune.map((_,i)=>tune.length-1-i);labels=(part==='bass'?['E','A','D','G']:['E','A','D','G','B','e']).slice().reverse();
   const fs=tsFrets(R.notes,tune);R.notes.forEach((n,i)=>{const f=fs[i];if(!f)return;const g=grid(n.t);put(g,f.s,String(f.f));if(part==='vocals')(cols[g]=cols[g]||{}).nm=tsName(n.m)})}
  const maxG=Math.max(16,...Object.keys(cols).map(Number))+1;const bars=Math.ceil(maxG/16);return{cols,lines,labels,kind,bars}}
-function tsTabHTML(T){let h='';for(let b=0;b<T.bars;b++){h+=`<div class="tsbar" data-bar="${b}"><div class="tsbn">${b+1}</div>`;
+function tsTabHTML(T){let h='';for(let b=0;b<T.bars;b++){h+=`<div class="tsbar" data-bar="${b}" aria-label="Bar ${b+1}"><div class="tsbn">${b+1}</div>`;
   const top=[];let has=false;for(let i=0;i<16;i++){const c=T.cols[b*16+i];const lab=c&&(c.chord||c.nm)||'';if(lab)has=true;top.push(`<span>${esc(lab)}</span>`)}if(has)h+=`<div class="tsrow tslab">${top.join('')}</div>`;
   T.lines.forEach((s,li)=>{h+=`<div class="tsrow"><b>${T.labels[li]}</b>`;for(let i=0;i<16;i++){const c=T.cols[b*16+i];const v=c&&c[s]?c[s].v:'';h+=`<span data-g="${b*16+i}" class="${v?'on':''}${i%4===0?' bt':''}">${v||''}</span>`}h+='</div>'});h+='</div>'}return h}
 function tsTabText(T,title){const W=3;const out=[title,'Transcribed by Theory Club. Automatic transcription makes mistakes, so check it against the recording.',''];
@@ -8999,10 +9074,10 @@ function viewTranscribe(host){const main=host;TS.stage=TS.stage||'source';const 
     try{TS.yt.unMute();TS.yt.setPlaybackRate(1);TS.yt.seekTo(0,true);TS.yt.playVideo()}catch(e){}go.textContent='Stop and use what it heard';
     tick=setInterval(()=>{if(!TS.cap){clearInterval(tick);return}let st=0,du=1;try{st=TS.yt.getPlayerState();du=TS.yt.getDuration()}catch(e){}const got=TS.cap.filled/TS.cap.sr;ls.textContent=`Listening… ${tsClock(got)} of ${tsClock(du)}`;if(st===0){go.click()}},500)};return}
   if(TS.stage==='part'){main.innerHTML=head+`<div class="stack ts"><section class="panel"><h3>3. Choose a part to isolate</h3><p class="hint">${esc(TS.title||'Your song')} · ${tsClock(TS.dur)}</p>${pillsHTML('tspart',TS_PARTS,TS.part)}
-   <div class="row" style="margin-top:12px"><button class="btn primary" id="tsrun">Separate and transcribe</button><span class="hint" id="tsrs" aria-live="polite"></span></div><i class="hbar"><i id="tsbar" style="width:0%"></i></i></section><a class="btn" href="#tools-isolate" id="tsback">Start again</a></div>`;
+   <div class="row" style="margin-top:12px"><button class="btn primary" id="tsrun">Separate and transcribe</button><span class="hint" id="tsrs" aria-live="polite"></span></div><i class="hbar" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="tsbarw"><i id="tsbar" style="width:0%"></i></i></section><a class="btn" href="#tools-isolate" id="tsback">Start again</a></div>`;
    main.querySelector('#tsback').onclick=e=>{e.preventDefault();TS.stage='source';R()};bindPills(main,(g,v)=>{TS.part=v;R()});
    main.querySelector('#tsrun').onclick=()=>{const b=main.querySelector('#tsrun'),rs=main.querySelector('#tsrs'),bar=main.querySelector('#tsbar');b.disabled=true;const W=tsWorker();
-    W.onmessage=e=>{const d=e.data;if(d.error){rs.textContent='Something went wrong: '+d.error;b.disabled=false;return}if(!d.done){rs.textContent=d.msg||'';bar.style.width=Math.round((d.p||0)*100)+'%';return}
+    W.onmessage=e=>{const d=e.data;if(d.error){rs.textContent='Something went wrong: '+d.error;b.disabled=false;return}if(!d.done){rs.textContent=d.msg||'';bar.style.width=Math.round((d.p||0)*100)+'%';{const bw=main.querySelector('#tsbarw');if(bw)bw.setAttribute('aria-valuenow',Math.round((d.p||0)*100))}return}
      Object.values(TS.urls).forEach(u=>URL.revokeObjectURL(u));TS.urls={part:URL.createObjectURL(tsWav(d.stem,d.sr)),minus:URL.createObjectURL(tsWav(d.rest,d.sr))};TS.res={part:TS.part,bpm:d.bpm,beats:d.beats,notes:d.notes,chords:d.chords,hits:d.hits};TS.view=TS.part==='other'&&d.chords.filter(c=>c.name!=='N').length>4?'':'lead';TS.mix='part';TS.id=null;TS.stage='play';R()};
     const L=new Float32Array(TS.L),Rr=TS.R===TS.L?null:new Float32Array(TS.R);W.postMessage({L,R:Rr,sr:TS.sr,part:TS.part},[L.buffer,...(Rr?[Rr.buffer]:[])])};return}
   if(TS.stage==='play'){const Rs=TS.res;const T=tsBuildTab(Rs,Rs.part,TS.view);const hasAudio=!!TS.urls.part&&!!TS.L;const yt=!!TS.ytId&&!claude;
@@ -9010,14 +9085,14 @@ function viewTranscribe(host){const main=host;TS.stage=TS.stage||'source';const 
    const nN=Rs.part==='drums'?Rs.hits.length:Rs.part==='other'&&TS.view!=='lead'?Rs.chords.filter(c=>c.name!=='N').length:Rs.notes.length;
    const restHTML=`
    <section class="panel"><div class="row" style="justify-content:space-between;align-items:baseline"><h3 style="margin:0">${esc(TS.title||'Your song')}</h3><span class="hint">${esc((TS_PARTS.find(p=>p[0]===Rs.part)||[])[1])} · ${Rs.bpm} BPM · ${nN} ${Rs.part==='drums'?'hits':Rs.part==='other'&&TS.view!=='lead'?'chords':'notes'}</span></div>
-    <div class="tstrans row"><button class="btn primary" id="tsplay">${ICON.play} Play</button><button class="btn small" id="tsrw">⏮</button><b id="tstime">0:00</b>
+    <div class="tstrans row"><button class="btn primary" id="tsplay" aria-keyshortcuts="Space" title="Play or pause (Space)">${ICON.play} Play</button><button class="btn small" id="tsrw" aria-label="Back to the start" title="Back to the start (Home)">⏮</button><b id="tstime">0:00</b>
      <label class="popt">Speed <select id="tsrate">${[1,.9,.75,.6,.5].map(r=>`<option value="${r}" ${r===TS.rate?'selected':''}>${Math.round(r*100)}%</option>`).join('')}</select></label>
      <label class="popt"><input type="checkbox" id="tsapp" ${TS.app?'checked':''}> App plays the part</label></div>
     <div class="pickrow"><span class="eyebrow">Hear</span>${pillsHTML('tsmix',mixes,TS.mix)}</div>
     ${Rs.part==='other'?`<div class="pickrow"><span class="eyebrow">Show</span>${pillsHTML('tsview',[['','Chords'],['lead','Lead line']],TS.view)}</div>`:''}
     <div class="row tsloop"><button class="btn small" id="tsla">Loop from here</button><button class="btn small" id="tslb">Loop to here</button><button class="btn small" id="tslc" ${TS.loopB==null?'disabled':''}>Clear loop</button><span class="hint">${TS.loopB!=null?`Looping ${tsClock(TS.loopA||0)}–${tsClock(TS.loopB)}`:''}</span>
      <span class="hint" style="margin-left:auto">Timing <button class="btn small" data-off="-0.02">−</button> ${Math.round(TS.offset*1000)} ms <button class="btn small" data-off="0.02">+</button></span></div></section>
-   <section class="panel"><h3>${T.kind==='drums'?'Drum tab':T.kind==='bass'?'Bass tab':T.kind==='chords'?'Chords and guitar tab':Rs.part==='vocals'?'Melody, with guitar tab':'Guitar tab'}</h3><p class="hint">Tap any bar to jump there. Each column is a sixteenth note; the shaded columns are the beats.</p><div class="tstab" tabindex="0">${tsTabHTML(T)}</div></section>
+   <section class="panel"><h3>${T.kind==='drums'?'Drum tab':T.kind==='bass'?'Bass tab':T.kind==='chords'?'Chords and guitar tab':Rs.part==='vocals'?'Melody, with guitar tab':'Guitar tab'}</h3><p class="hint">Tap any bar to jump there. Each column is a sixteenth note; the shaded columns are the beats.</p><div class="tstab" tabindex="0" role="region" aria-label="Tab. Use the left and right arrow keys to move by a bar, Enter to play from there" aria-describedby="tskeys">${tsTabHTML(T)}</div></section>
    <section class="panel"><div class="row"><button class="btn" id="tssave">${TS.id?'Saved':'Save'}</button><button class="btn" id="tsmidi">Download MIDI</button><button class="btn" id="tstxt">Download tab (.txt)</button>${hasAudio?'<button class="btn" id="tsother">Isolate another part</button>':''}<a class="btn" href="#tools-isolate" id="tsnew">New song</a></div>
     <p class="hint">Only the notes and timings are saved, never the audio${yt?', and the video stays on YouTube':''}.</p></section>`;
    const vp=main.querySelector('.tsvp');if(yt&&vp&&vp.dataset.v===TS.ytId&&TS.yt&&main.querySelector('.tsrest')){main.querySelector('.tsrest').innerHTML=restHTML}
@@ -9060,8 +9135,8 @@ let _joLeaveRaw=null;
    setTimeout(joRejoin(code,mine,mine?Object.assign({},sess||{},{playing:false}):null,mine?'You\'re hosting this room now.':'',mine?20:24,5000),mine?1500:6000);return r}}
  return _jl.apply(this,arguments)}}
 /* ================= v45: a tidier Home, and what's new ================= */
-const WN_VER='v45';
-const WN_ITEMS=[['Song transcriber','Add a song, isolate the vocals, guitar, bass or drums, get tab and play along.','#tools-isolate'],['Voice studio','A daily vocal workout in your own range, with pitch, vibrato and breath feedback.','#voice'],['Tone & gear','How 207 players get their sound, with EQ, settings and a tone match.','#tone'],['Lesson plans from your heroes','Pick up to five musicians and learn through their careers. Look up anyone.','#plan-new'],['Jam online','Record every player, reconnect on its own, and keep the room going if the host leaves.','#tools-online'],['Back up everything','Save all your progress to a file from Settings, and restore it on another device.','settings']];
+const WN_VER='v46';
+const WN_ITEMS=[['Sharper transcriptions','The song transcriber now finds the tempo, chords, vocal melody, bass line and drums far more accurately.','#tools-isolate'],['Accessibility settings','Larger text, high contrast, reduced motion and an easy-to-read font, in Settings. Plus full keyboard and screen reader support.','settings'],['Automatic updates','The desktop app checks for a new version every time it opens and updates itself.','settings'],['Song transcriber','Add a song, isolate the vocals, guitar, bass or drums, get tab and play along.','#tools-isolate'],['Voice studio','A daily vocal workout in your own range, with pitch, vibrato and breath feedback.','#voice'],['Tone & gear','How 207 players get their sound, with EQ, settings and a tone match.','#tone'],['Lesson plans from your heroes','Pick up to five musicians and learn through their careers. Look up anyone.','#plan-new'],['Jam online','Record every player, reconnect on its own, and keep the room going if the host leaves.','#tools-online'],['Back up everything','Save all your progress to a file from Settings, and restore it on another device.','settings']];
 function whatsNewHTML(){return`<div class="wnov" role="dialog" aria-modal="true" aria-labelledby="wnt"><div class="wnbox panel"><span class="eyebrow">What's new</span><h2 id="wnt">New in Theory Club</h2><ul class="wnlist">${WN_ITEMS.map(([t,d,h])=>`<li><a href="${h==='settings'?'#home':h}" data-wn="${h}"><b>${esc(t)}</b><span class="hint">${esc(d)}</span></a></li>`).join('')}</ul><div class="row"><button class="btn primary" id="wnok">Got it</button></div></div></div>`}
 function showWhatsNew(){if(document.querySelector('.wnov'))return;document.body.insertAdjacentHTML('beforeend',whatsNewHTML());const ov=document.querySelector('.wnov');const close=()=>{store.set('wnSeen',WN_VER);ov.remove()};
  ov.querySelector('#wnok').onclick=close;ov.onclick=e=>{if(e.target===ov)close()};ov.querySelectorAll('[data-wn]').forEach(a=>a.onclick=e=>{close();if(a.dataset.wn==='settings'){e.preventDefault();try{openSettings(false)}catch(x){}}});document.addEventListener('keydown',function k(e){if(e.key==='Escape'){close();document.removeEventListener('keydown',k)}});ov.querySelector('#wnok').focus()}
@@ -9074,6 +9149,86 @@ function tidyHome(){const g=main.querySelector('.hgrid');if(!g||g.dataset.tidy)r
  try{if(store.get('hmoreOpen',false))d.open=true}catch(e){}d.addEventListener('toggle',()=>store.set('hmoreOpen',d.open));g.after(d);const wo=main.querySelector('#wnopen');if(wo)wo.onclick=showWhatsNew}
 {const _vh=viewHome;viewHome=function(){_vh();try{tidyHome()}catch(e){}try{if(store.get('welcomed',false)&&store.get('wnSeen','')!==WN_VER&&!document.querySelector('#onb'))setTimeout(()=>{if(location.hash===''||location.hash==='#home')showWhatsNew()},700)}catch(e){}}}
 Object.assign(window,{showWhatsNew,tidyHome,joRejoin,joState:()=>({s:JO.status,host:JO.host,code:JO.code,n:(JO.roster||[]).length,names:(JO.roster||[]).map(r=>r.name).join(','),err:JO.err}),joTestLost:()=>{JO.err='Lost the connection to the host.';joLeave(true)}});
+
+/* ================= v46: automatic updates in the desktop app ================= */
+/* On every launch the app asks GitHub for the newest version straight away. If one is found in the first minute,
+   it installs and restarts after a short countdown (unless you're mid-jam). Found later, it installs when you close the app. */
+const UPD_T0=Date.now();
+function updAuto(){return store.get('autoUpd',true)!==false}
+function updBusy(){try{if(JO.status==='in')return true}catch(e){}if([...document.querySelectorAll('audio,video')].some(a=>!a.paused))return true;return /^#(tools-isolate|tools-online)/.test(location.hash)&&!!document.querySelector('.tsvp')}
+function updCountdown(){if(document.getElementById('updov'))return;let n=6;const ov=document.createElement('div');ov.id='updov';ov.className='wnov';ov.setAttribute('role','alertdialog');ov.setAttribute('aria-modal','true');ov.setAttribute('aria-labelledby','updovt');ov.setAttribute('aria-describedby','updovd');
+ ov.innerHTML=`<div class="wnbox panel"><span class="eyebrow">Update</span><h2 id="updovt">Updating to Theory Club ${esc(UPD.info.version)}</h2><p id="updovd" aria-live="polite">Theory Club will restart in <b id="updn">${n}</b> seconds. Your progress is kept.</p><div class="row"><button class="btn primary" id="updovgo">Restart now</button><button class="btn" id="updovno">Not now</button></div></div>`;
+ document.body.appendChild(ov);const go=()=>{clearInterval(tm);ov.remove();updInstall()};const tm=setInterval(()=>{n--;const el=document.getElementById('updn');if(el)el.textContent=n;if(n<=0)go()},1000);
+ ov.querySelector('#updovgo').onclick=go;ov.querySelector('#updovno').onclick=()=>{clearInterval(tm);ov.remove();UPD.dismissed=false;updBanner()};ov.querySelector('#updovno').focus()}
+{const _b=updBanner;updBanner=function(){_b();const b=document.getElementById('updbar');if(!b||!updAuto())return;const s=b.querySelector('span');if(s&&!/when you close/.test(s.textContent))s.insertAdjacentHTML('beforeend',' <span class="hint">Or it installs by itself when you close Theory Club.</span>')}}
+{const _c=updCheck;updCheck=async function(manual){await _c(manual);if(UPD.state==='ready'&&updAuto()&&!manual&&Date.now()-UPD_T0<60e3&&!updBusy())updCountdown()}}
+{const _s=updSettings;updSettings=function(){_s();const el=document.getElementById('updset');if(!el||el.querySelector('#updauto'))return;
+ el.insertAdjacentHTML('beforeend',`<label class="row" style="gap:8px;margin-top:10px;align-items:center"><input type="checkbox" id="updauto" ${updAuto()?'checked':''}> <span>Update automatically <span class="hint">(checks GitHub each time you open the app)</span></span></label>`);
+ el.querySelector('#updauto').onchange=e=>{store.set('autoUpd',e.target.checked);natCall('update_auto',{on:e.target.checked}).catch(()=>{});updBanner()}}}
+if(TAU){natCall('update_auto',{on:updAuto()}).catch(()=>{});setTimeout(()=>updCheck(false),1500)}
+Object.assign(window,{updCountdown,updAuto});
+
+/* ================= v46: accessibility ================= */
+const A11Y_DEF={size:1,contrast:false,motion:'system',font:'default',focus:true};
+function a11y(){return Object.assign({},A11Y_DEF,store.get('a11y',{})||{})}
+function a11ySet(k,v){const a=a11y();a[k]=v;store.set('a11y',a);applyA11y()}
+let _a11yFont=false;
+function applyA11y(){const a=a11y(),r=document.documentElement;if(!r.lang)r.lang='en';r.style.setProperty('--a11y-z',String(a.size||1));
+ r.toggleAttribute('data-a11y-contrast',!!a.contrast);r.toggleAttribute('data-a11y-still',a.motion==='reduce');r.toggleAttribute('data-a11y-font',a.font==='readable');
+ if(a.font==='readable'&&!_a11yFont){_a11yFont=true;const l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap';document.head.appendChild(l)}}
+/* a skip link and one shared place to announce things to screen readers */
+function a11yChrome(){if(document.getElementById('skiplink'))return;const sk=document.createElement('a');sk.id='skiplink';sk.className='skiplink';sk.href='#';sk.textContent='Skip to main content';
+ sk.onclick=e=>{e.preventDefault();const h=document.querySelector('#main h1,#main h2')||document.getElementById('main');if(h){if(!h.hasAttribute('tabindex'))h.setAttribute('tabindex','-1');h.focus()}};document.body.prepend(sk);
+ const lv=document.createElement('div');lv.id='a11ylive';lv.className='sr-only';lv.setAttribute('aria-live','polite');lv.setAttribute('aria-atomic','true');document.body.appendChild(lv)}
+function announce(t){const lv=document.getElementById('a11ylive');if(!lv)return;lv.textContent='';setTimeout(()=>{lv.textContent=t},60)}
+/* after moving to another page: name the page, and if keyboard focus was lost with the old page, put it on the new heading */
+let _a11yFirst=true;
+function a11yRoute(){setTimeout(()=>{const h=document.querySelector('#main h1')||document.querySelector('#main h2');const name=h?h.textContent.replace(/\s+/g,' ').trim().slice(0,80):'';
+ if(name)document.title=name+' · Theory Club';if(_a11yFirst){_a11yFirst=false;return}if(name)announce(name);
+ const ae=document.activeElement;if(a11y().focus&&h&&(!ae||ae===document.body||!ae.isConnected)){if(!h.hasAttribute('tabindex'))h.setAttribute('tabindex','-1');h.focus({preventScroll:true})}},120)}
+window.addEventListener('hashchange',a11yRoute);
+/* settings */
+function a11yHTML(){const a=a11y();return`<div class="pickrow" id="a11yset"><span class="eyebrow">Accessibility</span>
+ <div class="pickrow"><span class="hint">Text size</span>${pillsHTML('a11ysize',[['1','Standard'],['1.15','Large'],['1.3','Larger']],String(a.size||1))}</div>
+ <label class="row a11ychk"><input type="checkbox" data-a11y="contrast" ${a.contrast?'checked':''}> <span>High contrast <span class="hint">stronger text, borders and focus rings</span></span></label>
+ <label class="row a11ychk"><input type="checkbox" data-a11y="motion" ${a.motion==='reduce'?'checked':''}> <span>Reduce motion <span class="hint">no animations or moving highlights</span></span></label>
+ <label class="row a11ychk"><input type="checkbox" data-a11y="font" ${a.font==='readable'?'checked':''}> <span>Easy-to-read font <span class="hint">Atkinson Hyperlegible, designed for low vision</span></span></label>
+ <label class="row a11ychk"><input type="checkbox" data-a11y="focus" ${a.focus?'checked':''}> <span>Move focus to the new page <span class="hint">helps screen reader and keyboard users</span></span></label>
+ <p class="hint">Keyboard: Tab moves between controls, and the “Skip to main content” link appears first. In the song transcriber, Space plays or pauses and the arrow keys move through the bars.</p></div>`}
+function a11yBind(body){const s=body.querySelector('#a11yset');if(!s)return;bindPills(s,(g,v)=>{if(g==='a11ysize'){a11ySet('size',+v);s.querySelectorAll('[data-group=a11ysize] .pill').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v))}});
+ s.querySelectorAll('[data-a11y]').forEach(c=>c.onchange=()=>{const k=c.dataset.a11y;a11ySet(k,k==='motion'?(c.checked?'reduce':'system'):k==='font'?(c.checked?'readable':'default'):c.checked)})}
+{const _os=openSettings;openSettings=function(){const r=_os.apply(this,arguments);try{const body=document.getElementById('setbody');const add=()=>{if(!body.querySelector('#a11yset')){const del=body.querySelector('.delzone');const w=document.createElement('div');w.innerHTML=a11yHTML();(del?del.before(w.firstElementChild):body.appendChild(w.firstElementChild));a11yBind(body)}};add();
+  if(!body._a11yObs){body._a11yObs=new MutationObserver(()=>{if(!body.querySelector('#a11yset'))add()});body._a11yObs.observe(body,{childList:true})}}catch(e){}return r}}
+/* song transcriber from the keyboard, and the notes as text for screen readers */
+function tsKeys(e){if(!/^#tools-isolate/.test(location.hash))return;const t=e.target;if(t&&(/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)||t.isContentEditable))return;if(e.ctrlKey||e.metaKey||e.altKey)return;
+ const pb=document.getElementById('tsplay');if(!pb)return;const bars=[...document.querySelectorAll('.tstab .tsbar')];const cur=()=>{const tm=tsTime();let k=0;bars.forEach((b,i)=>{const g=+b.dataset.bar*16;try{if(tsGridTime(TS.res.beats,g)<=tm+.01)k=i}catch(x){}});return k};
+ const go=i=>{i=Math.max(0,Math.min(bars.length-1,i));const b=bars[i];if(!b)return;b.click();announce('Bar '+(i+1));b.scrollIntoView({block:'nearest',inline:'center',behavior:a11y().motion==='reduce'?'auto':'smooth'})};
+ if(e.key===' '&&!(t&&t.tagName==='BUTTON')){e.preventDefault();pb.click();setTimeout(()=>announce(tsPlaying()?'Playing':'Paused'),120)}
+ else if(e.key==='ArrowRight'&&bars.length&&(t.closest&&t.closest('.tstab')||e.shiftKey)){e.preventDefault();go(cur()+1)}
+ else if(e.key==='ArrowLeft'&&bars.length&&(t.closest&&t.closest('.tstab')||e.shiftKey)){e.preventDefault();go(cur()-1)}
+ else if(e.key==='Home'&&t.closest&&t.closest('.tstab')){e.preventDefault();const rw=document.getElementById('tsrw');if(rw)rw.click();announce('Back to the start')}
+ else if(e.key==='Enter'&&t.closest&&t.closest('.tstab')){e.preventDefault();if(!tsPlaying())pb.click()}
+ else if(e.key==='['){const b=document.getElementById('tsla');if(b){b.click();announce('Loop starts here')}}
+ else if(e.key===']'){const b=document.getElementById('tslb');if(b){b.click();announce('Loop ends here')}}}
+document.addEventListener('keydown',tsKeys);
+function tsReadText(){const R=TS.res;if(!R||!R.beats||R.beats.length<2)return'';const B=R.beats;const nb=Math.ceil(B.length/4);const N=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];const nm=m=>N[m%12]+(Math.floor(m/12)-1);const out=[];
+ for(let b=0;b<nb;b++){const a=B[b*4],z=B[Math.min(B.length-1,b*4+4)]+(b*4+4>=B.length?9:0);const ch=[...new Set((R.chords||[]).filter(c=>c.t>=a-.01&&c.t<z&&c.name!=='N').map(c=>c.name))];const ns=(R.notes||[]).filter(n=>n.t>=a-.03&&n.t<z-.03).map(n=>nm(n.m));
+  const hs=(R.hits||[]).filter(h=>h.t>=a-.03&&h.t<z-.03);const dr=hs.length?['kick','snare','hat'].map(k=>{const c=hs.filter(h=>h.k===k).length;return c?`${c} ${k==='hat'?'hi-hat':k}${c>1?'s':''}`:''}).filter(Boolean).join(', '):'';
+  const parts=[];if(ch.length)parts.push((ch.length>1?'chords ':'chord ')+ch.join(', '));if(ns.length)parts.push('notes '+ns.join(' '));if(dr)parts.push(dr);out.push(`<li>Bar ${b+1}: ${parts.length?esc(parts.join('; ')):'rest'}</li>`)}
+ return out.join('')}
+function tsA11yPanel(){const tab=document.querySelector('.tstab');if(!tab||document.getElementById('tsread'))return;const sec=tab.closest('section');if(!sec)return;
+ sec.insertAdjacentHTML('beforeend',`<p class="hint" id="tskeys">Keys: Space plays or pauses. In the tab, the arrow keys move a bar, Enter plays from there, Home goes back to the start, [ and ] set a loop.</p><details id="tsread" class="tsread"><summary>Read the transcription as text</summary><ol class="tsreadl">${tsReadText()}</ol></details>`)}
+new MutationObserver(()=>{if(/^#tools-isolate/.test(location.hash))tsA11yPanel()}).observe(document.getElementById('main'),{childList:true,subtree:true});
+/* small fixes found by an automated check */
+/* name selects and empty table headers that a screen reader would otherwise read as blank */
+function a11yNames(){document.querySelectorAll('#main select:not([aria-label]):not([id]),#main select.psel:not([aria-label])').forEach(x=>{if(x.labels&&x.labels.length)return;const box=x.closest('.pickrow,.row,label,div');let t='';const ey=box&&box.querySelector('.eyebrow,h3,h4,b');if(ey&&!ey.contains(x))t=ey.textContent.trim();if(!t){let p=x.previousElementSibling;if(p)t=p.textContent.trim()}x.setAttribute('aria-label',(t||'Choose an option').slice(0,60))});
+ document.querySelectorAll('#main th').forEach(th=>{if(!th.textContent.trim()&&!th.querySelector('.sr-only')){th.innerHTML='<span class="sr-only">Listen</span>'}})}
+/* keep the heading outline in order for screen readers (a section heading never skips a level) */
+let _hoT=0;function a11yHeadings(){const hs=[...document.querySelectorAll('#main h1,#main h2,#main h3,#main h4,#main h5,#main h6')];let prev=0;hs.forEach(h=>{const lv=+h.tagName[1];h.removeAttribute('aria-level');const want=prev&&lv>prev+1?prev+1:!prev&&lv>2?lv:lv;if(want!==lv)h.setAttribute('aria-level',want);prev=want})}
+new MutationObserver(()=>{clearTimeout(_hoT);_hoT=setTimeout(()=>{a11yHeadings();a11yNames()},80)}).observe(document.getElementById('main'),{childList:true,subtree:true});
+{const _vh=viewHome;viewHome=function(){_vh.apply(this,arguments);document.querySelectorAll('.badge2:not(.on)').forEach(b=>b.classList.add('locked'))}}
+applyA11y();a11yChrome();a11yRoute();
+Object.assign(window,{applyA11y,a11y,announce,tsReadText});
 
 window.__tc={cleanIcon,manualIcon,findIcon,saveMyIcon,ICONS,buildPlan,viewMyPlan,viewPlanBuilder,techDiff,lessonPlanHTML,roadPlanHTML,ROADS,jLevels,techT,techX,VTECH,viewRoads,curRoad,setRoad,JTECH,jtQuestion,viewJTech,jMake,jUnits,JB,JG,engrave,asciiFitBar,JO,JR,joLnow,natSess,joChordAt:(...a)=>joChordAt(...a),UPD,TAB_EX,makeZip,midiFile,gtrVoice,drumVary,percHits,DKITS,drum,PLAYDB,TECH,PD,studyEx,pdEx,parseAsciiTab,scoreToEx,drumChart,topicPool,ksBuf,pianoBuf,detectPitch,audio:()=>audio(),AC:()=>AC,MASTER:()=>MASTER,tone:(...a)=>tone(...a),renderOffline:(...a)=>renderOffline(...a),itemFx:(...a)=>itemFx(...a),transformEx,chromaOf,chordMissing,packCode,unpackCode,MEDIA:()=>MEDIA,progressData,lickEx,LICKLIB,earQuestion,heardNotes,icsFor,INPUT:()=>INPUT,startTour,homeClef,noteQ,JT:()=>JT,JOURNEY:()=>JOURNEY,G:()=>G,songStepEx,TECHX:()=>TECHX,gtrOut:()=>gtrOut()};
 /* ---------- router ---------- */

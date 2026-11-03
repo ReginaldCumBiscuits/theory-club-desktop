@@ -92,10 +92,11 @@ async def features(browser):
     if not await pg.evaluate("!!document.querySelector('.wnov')"):
         fail("What's new didn't show on first open")
     await pg.evaluate("document.querySelector('#wnok')&&document.querySelector('#wnok').click()")
-    # song transcriber: separation and transcription on a generated song with known chords and tempo
+    # song transcriber: separation and transcription on a generated song with known chords, tempo and drums
+    # (kick on beats 1 and 3, snare on 2 and 4, 120 BPM, 12 seconds)
     for part in ['other', 'vocals', 'drums']:
         r = await pg.evaluate("""part=>new Promise(res=>{const S=""" + SYNTH + """;const src='('+tsWorkerMain.toString()+')()';const W=new Worker(URL.createObjectURL(new Blob([src])));
-          W.onmessage=e=>{if(e.data.done||e.data.error){res({err:e.data.error,bpm:e.data.bpm,chords:(e.data.chords||[]).map(c=>c.name),notes:(e.data.notes||[]).length,hits:(e.data.hits||[]).length});W.terminate()}};W.postMessage({L:S.L,R:S.R,sr:S.sr,part})})""", part)
+          W.onmessage=e=>{if(e.data.done||e.data.error){res({err:e.data.error,bpm:e.data.bpm,chords:(e.data.chords||[]).map(c=>c.name),notes:(e.data.notes||[]).length,hits:(e.data.hits||[]).length,kicks:(e.data.hits||[]).filter(h=>h.k==='kick').length,snares:(e.data.hits||[]).filter(h=>h.k==='snare').length});W.terminate()}};W.postMessage({L:S.L,R:S.R,sr:S.sr,part})})""", part)
         if r.get('err'):
             fail(f'transcriber {part}: {r["err"]}')
         elif abs(r['bpm'] - 120) > 4:
@@ -104,11 +105,12 @@ async def features(browser):
             fail(f'transcriber chords: {r["chords"][:8]}')
         elif part == 'vocals' and r['notes'] < 15:
             fail(f'transcriber vocals: only {r["notes"]} notes')
-        elif part == 'drums' and r['hits'] < 30:
-            fail(f'transcriber drums: only {r["hits"]} hits')
+        elif part == 'drums' and not (10 <= r['kicks'] <= 14 and 10 <= r['snares'] <= 14):
+            fail(f'transcriber drums: {r["kicks"]} kicks and {r["snares"]} snares, expected 12 of each')
     print('  transcriber checked', flush=True)
     checks = [
         ('#tools-isolate', "!!document.querySelector('#tsfile')", 'transcriber page'),
+        ('#home', "!!document.getElementById('skiplink')&&document.documentElement.lang==='en'&&!!document.getElementById('a11ylive')", 'skip link and screen reader announcements'),
         ('#tone-jimi-hendrix', "!!document.querySelector('.eqsvg')&&document.querySelectorAll('.tone .panel').length>=7", 'tone guide'),
         ('#tone-basics', "document.querySelectorAll('.eqsl input').length===7", 'EQ playground'),
         ('#voice-range', "!!document.querySelector('.vsteps,.vsrange,#vsml')", 'Voice studio range'),
