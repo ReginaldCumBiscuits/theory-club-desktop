@@ -4,8 +4,6 @@ name: Android
 # Run by hand to test, or from the release workflow with a version to attach it to that release.
 on:
   workflow_dispatch:
-  push:
-    branches: [v51-android]   # testing the Android build; removed before merging
   workflow_call:
     inputs:
       version:

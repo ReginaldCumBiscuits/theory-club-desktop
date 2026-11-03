@@ -166,8 +166,15 @@ jobs:
             dist/*.msi
             dist/*.dmg
 
+  android:
+    needs: prep
+    uses: ./.github/workflows/android.yml
+    with:
+      version: ${{ needs.prep.outputs.version }}
+    secrets: inherit
+
   publish:
-    needs: [prep, build]
+    needs: [prep, build, android]
     runs-on: ubuntu-latest
     env:
       VERSION: ${{ needs.prep.outputs.version }}
@@ -196,7 +203,7 @@ jobs:
 
   cleanup:
     # if a build fails, remove the half-made draft so nothing broken ships
-    needs: [prep, build]
+    needs: [prep, build, android]
     if: failure() && needs.prep.result == 'success'
     runs-on: ubuntu-latest
     steps:
