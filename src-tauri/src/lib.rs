@@ -14,6 +14,9 @@ struct Eng(Arc<Engine>);
 #[derive(Default)]
 struct Pending(Mutex<Option<(tauri_plugin_updater::Update, Vec<u8>)>>);
 
+/// Whether a downloaded update installs by itself when the app closes (on unless the user turns it off).
+struct AutoUpdate(std::sync::atomic::AtomicBool);
+
 #[derive(serde::Serialize)]
 struct UpdateInfo {
     current: String,
@@ -52,6 +55,12 @@ fn update_install(app: tauri::AppHandle, pending: State<'_, Pending>, eng: State
     eng.0.stop_audio();
     u.install(bytes).map_err(|e| e.to_string())?;
     app.restart();
+}
+
+/// Turns installing on close on or off (the page's "Update automatically" setting).
+#[tauri::command]
+fn update_auto(auto: State<'_, AutoUpdate>, on: bool) {
+    auto.0.store(on, std::sync::atomic::Ordering::Relaxed);
 }
 
 #[tauri::command]
@@ -242,6 +251,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .manage(Eng(engine))
         .manage(Pending::default())
+        .manage(AutoUpdate(std::sync::atomic::AtomicBool::new(true)))
         .invoke_handler(tauri::generate_handler![
             engine_hosts,
             engine_devices,
@@ -263,6 +273,7 @@ pub fn run() {
             rec_open,
             update_check,
             update_install,
+            update_auto,
             app_version,
             selftest_report,
             selftest_log
@@ -283,6 +294,23 @@ pub fn run() {
             }
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running Theory Club");
+        .build(tauri::generate_context!())
+        .expect("error while building Theory Club")
+        .run(|app, event| {
+            // A new version that finished downloading while the app was open installs as it closes,
+            // so the next launch is already up to date.
+            if let tauri::RunEvent::Exit = event {
+                use tauri::Manager;
+                let on = app.state::<AutoUpdate>().0.load(std::sync::atomic::Ordering::Relaxed);
+                let ready = app.state::<Pending>().0.lock().unwrap().take();
+                if let (true, Some((u, bytes))) = (on, ready) {
+                    let eng = app.state::<Eng>();
+                    eng.0.net_close();
+                    eng.0.stop_audio();
+                    if let Err(e) = u.install(bytes) {
+                        eprintln!("update on exit failed: {e}");
+                    }
+                }
+            }
+        });
 }
