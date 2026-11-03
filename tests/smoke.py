@@ -107,6 +107,14 @@ async def features(browser):
             fail(f'transcriber vocals: only {r["notes"]} notes')
         elif part == 'drums' and not (10 <= r['kicks'] <= 14 and 10 <= r['snares'] <= 14):
             fail(f'transcriber drums: {r["kicks"]} kicks and {r["snares"]} snares, expected 12 of each')
+    # an already-separated part (what the desktop app's AI separation hands over) goes straight to transcription
+    MEL = r"""(()=>{const sr=44100,n=sr*12,V=new Float32Array(n);const mel=[69,71,72,74,76,74,72,71];for(let b=0;b<24;b++){const f=440*Math.pow(2,(mel[b%8]-69)/12),s0=b*sr/2;for(let i=0;i<.45*sr;i++){const t=i/sr;V[s0+i]=(Math.sin(2*Math.PI*f*t)+.4*Math.sin(4*Math.PI*f*t))*.3*Math.min(1,t*40)}}return V})()"""
+    r = await pg.evaluate("""()=>new Promise(res=>{const S=""" + SYNTH + """;const V=""" + MEL + """;const src='('+tsWorkerMain.toString()+')()';const W=new Worker(URL.createObjectURL(new Blob([src])));
+      W.onmessage=e=>{if(e.data.done||e.data.error){res({err:e.data.error,notes:(e.data.notes||[]).map(x=>x.m)});W.terminate()}};W.postMessage({L:S.L,R:S.R,sr:S.sr,part:'vocals',pre:{L:V,R:V.slice(),sr:44100}})})""")
+    if r.get('err'):
+        fail(f'transcriber with a separated part: {r["err"]}')
+    elif len(r['notes']) < 18 or sum(1 for m in r['notes'] if m in (69, 71, 72, 74, 76)) < len(r['notes']) * 0.8:
+        fail(f'transcriber with a separated part: notes {r["notes"][:30]}')
     print('  transcriber checked', flush=True)
     checks = [
         ('#tools-isolate', "!!document.querySelector('#tsfile')", 'transcriber page'),
@@ -124,6 +132,20 @@ async def features(browser):
         await pg.wait_for_timeout(500)
         if not await pg.evaluate(test):
             fail(f'{name} ({h}) did not render')
+    # fixing a wrong note on a finished transcription
+    await pg.evaluate("TS.res={part:'vocals',bpm:120,beats:[0,.5,1,1.5,2,2.5,3,3.5],notes:[{t:.1,m:60,d:.3},{t:.6,m:62,d:.3}],chords:[],hits:[]};TS.stage='play';TS.L=null;TS.ytId='';TS.fileUrl=null;location.hash='#tools'")
+    await pg.wait_for_timeout(300)
+    await pg.evaluate("location.hash='#tools-isolate'")
+    await pg.wait_for_timeout(700)
+    try:
+        await pg.click('#tsfix summary')
+        await pg.click('[data-fi="0"]')
+        await pg.click('[data-fx="up"]')
+        await pg.wait_for_timeout(300)
+        if await pg.evaluate("TS.res.notes[0].m") != 61:
+            fail('fixing a note did not change it')
+    except Exception as e:
+        fail(f'fix a wrong note: {e}')
     # lesson plan builder
     await pg.evaluate("h=>{location.hash=h}", '#plan-new')
     await pg.wait_for_timeout(400)

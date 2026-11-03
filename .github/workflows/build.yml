@@ -120,6 +120,10 @@ jobs:
       - name: Engine tests
         run: cargo test -p tc-engine --release --lib
 
+      - name: ONNX Runtime for AI separation
+        shell: bash
+        run: bash scripts/fetch-onnxruntime.sh "${{ matrix.tag }}"
+
       - name: Build the app
         run: tauri build ${{ matrix.args }}
 

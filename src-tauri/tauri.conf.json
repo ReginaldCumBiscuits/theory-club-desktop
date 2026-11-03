@@ -25,6 +25,7 @@
     "active": true,
     "targets": "all",
     "category": "Music",
+    "resources": ["ort/*"],
     "shortDescription": "Music theory, practice and online jamming",
     "icon": [
       "icons/32x32.png",

@@ -1,6 +1,9 @@
 //! Desktop shell: the Theory Club web app plus the native jam engine,
 //! exposed to the page as Tauri commands.
 
+mod ai;
+mod sepcore;
+
 use std::sync::{Arc, Mutex};
 use tauri::State;
 use tc_engine::audio::{AudioCfg, AudioInfo, DevList, HostInfo};
@@ -236,6 +239,26 @@ window.onerror = (m) => window.__TAURI__ && window.__TAURI__.core.invoke('selfte
     const u = await t('update_check', 'update_check', {}, window.__updExpect === 'error');
     if (window.__updExpect !== 'error') { if (!u || u.version !== window.__updExpect) { out.fail++; out.notes.push('update not offered: ' + JSON.stringify(u)); } else out.notes.push('update ready ' + u.current + ' -> ' + u.version); }
   }
+  const ai = await t('ai_status', 'ai_status');
+  if (window.__aiExpect === 'install') {
+    let last = 0; const un = await window.__TAURI__.event.listen('ai-progress', e => { last = e.payload.p; });
+    await t('ai_install', 'ai_install');
+    un();
+    const s2 = await I('ai_status');
+    if (!s2.installed || last !== 1) { out.fail++; out.notes.push('ai_install did not finish: ' + JSON.stringify(s2) + ' progress ' + last); } else out.notes.push('ai_install progress reached ' + last);
+  }
+  if (window.__aiExpect) {
+    // a 3-second test signal through the AI separator: a bass note plus a hi-hat-like noise
+    const n = 44100 * 3, buf = new Float32Array(n * 2);
+    for (let i = 0; i < n; i++) { const v = 0.4 * Math.sin(2 * Math.PI * 55 * i / 44100) + 0.05 * (Math.random() * 2 - 1) * Math.exp(-((i % 11025) / 800)); buf[i] = v; buf[n + i] = v; }
+    try {
+      const ab = await I('ai_separate', new Uint8Array(buf.buffer), {headers: {'x-part': 'bass'}});
+      const f = new Float32Array(ab); let e = 0; for (let i = 0; i < f.length; i++) e += f[i] * f[i];
+      const rms = Math.sqrt(e / Math.max(1, f.length));
+      if (f.length !== 2 * Math.floor(n / 2) || !(rms > 0.05)) { out.fail++; out.notes.push('ai_separate wrong output: ' + f.length + ' samples, rms ' + rms); }
+      else { out.pass++; out.notes.push('ai_separate ok: ' + f.length + ' samples, rms ' + rms.toFixed(3)); }
+    } catch (err) { out.fail++; out.notes.push('ai_separate: ' + err); }
+  }
   await t('app_version', 'app_version');
   const page = !!(document.querySelector('#main') && window.__tc && window.__tc.JO);
   if (!page) { out.fail++; out.notes.push('page did not load'); } else out.pass++;
@@ -251,6 +274,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .manage(Eng(engine))
         .manage(Pending::default())
+        .manage(ai::Ai::default())
         .manage(AutoUpdate(std::sync::atomic::AtomicBool::new(true)))
         .invoke_handler(tauri::generate_handler![
             engine_hosts,
@@ -275,6 +299,10 @@ pub fn run() {
             update_install,
             update_auto,
             app_version,
+            ai::ai_status,
+            ai::ai_install,
+            ai::ai_remove,
+            ai::ai_separate,
             selftest_report,
             selftest_log
         ])
@@ -284,6 +312,9 @@ pub fn run() {
                 if let Some(w) = app.get_webview_window("main") {
                     std::thread::spawn(move || {
                         std::thread::sleep(std::time::Duration::from_secs(3));
+                        if std::env::var("TC_SELFTEST_AI").is_ok() {
+                            let _ = w.eval(format!("window.__aiExpect = {:?};", std::env::var("TC_SELFTEST_AI").unwrap_or_default()));
+                        }
                         if let Ok(x) = std::env::var("TC_SELFTEST_UPDATE") {
                             let _ = w.eval(format!("window.__updExpect = {:?};", x));
                         }

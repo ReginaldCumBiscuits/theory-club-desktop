@@ -4,3 +4,5 @@ node_modules/
 _site/
 release-web/
 _zip/
+src-tauri/ort/*
+!src-tauri/ort/README.md
