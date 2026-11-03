@@ -110,6 +110,8 @@ async def features(browser):
     print('  transcriber checked', flush=True)
     checks = [
         ('#tools-isolate', "!!document.querySelector('#tsfile')", 'transcriber page'),
+        ('#course', "document.querySelectorAll('.crsst').length===8", 'course overview'),
+        ('#course-3', "document.querySelectorAll('[data-cg]').length>=4&&document.querySelectorAll('.crsgrid .panel').length>=5", 'course stage'),
         ('#home', "!!document.getElementById('skiplink')&&document.documentElement.lang==='en'&&!!document.getElementById('a11ylive')", 'skip link and screen reader announcements'),
         ('#tone-jimi-hendrix', "!!document.querySelector('.eqsvg')&&document.querySelectorAll('.tone .panel').length>=7", 'tone guide'),
         ('#tone-basics', "document.querySelectorAll('.eqsl input').length===7", 'EQ playground'),
