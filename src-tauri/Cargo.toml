@@ -19,6 +19,11 @@ tc-engine = { path = "../engine" }
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 url = "2"
+# AI stem separation for the song transcriber (ONNX Runtime is bundled as a library and loaded at run time)
+ort = { version = "=2.0.0-rc.10", default-features = false, features = ["std", "load-dynamic"] }
+realfft = "3"
+ureq = "2"
+sha2 = "0.10"
 
 [features]
 # Windows: build with Steinberg ASIO support (needs the ASIO SDK, see README)

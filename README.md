@@ -145,6 +145,21 @@ To check the whole app, run `TC_SELFTEST=1` with the built app. It calls every
 engine command from the page and exits with a pass/fail summary. On Linux CI,
 add `xvfb-run` and a null sound card.
 
+## AI separation (song transcriber)
+
+The desktop app can separate vocals, bass, drums and the rest of a song with a trained model before transcribing it,
+which is far more accurate on real recordings than the signal-processing separator the web version uses.
+
+- **Models:** MDX-Net "A" models by KUIELab (Music Demixing Challenge 2021, MIT licence), downloaded from the
+  [UVR model repository](https://github.com/TRvlvr/model_repo/releases/tag/all_public_uvr_models) the first time
+  someone turns the feature on (4 × 29.7 MB), checked against SHA-256 hashes in `src-tauri/src/ai.rs`, and kept in the
+  app's data folder. "Remove the AI download" in the transcriber deletes them.
+- **Runtime:** [ONNX Runtime](https://github.com/microsoft/onnxruntime) 1.23 (MIT licence) ships inside the app;
+  `scripts/fetch-onnxruntime.sh` puts the right library in `src-tauri/ort/` during the release build.
+- **Everything runs on the computer.** No audio leaves it.
+- To test locally: `TC_ORT=/path/to/libonnxruntime.so TC_SELFTEST=1 TC_SELFTEST_AI=1 cargo run -p theory-club`
+  (with the models already downloaded, or `TC_SELFTEST_AI=install` to download them first).
+
 ## How a jam connects
 
 1. The host starts a room in Jam online. The 5-letter code and invite link
