@@ -14,6 +14,7 @@ use tc_engine::{Engine, NetInfo};
 struct Eng(Arc<Engine>);
 
 /// An update that has been downloaded and verified, waiting for a restart.
+#[cfg(desktop)]
 #[derive(Default)]
 struct Pending(Mutex<Option<(tauri_plugin_updater::Update, Vec<u8>)>>);
 
@@ -27,8 +28,24 @@ struct UpdateInfo {
     notes: Option<String>,
 }
 
+/// On Android, updates come from the download page instead (the page checks GitHub itself).
+#[cfg(mobile)]
+#[derive(Default)]
+struct Pending;
+#[cfg(mobile)]
+#[tauri::command]
+async fn update_check() -> Result<Option<UpdateInfo>, String> {
+    Err("On this device, new versions come from the download page.".into())
+}
+#[cfg(mobile)]
+#[tauri::command]
+fn update_install() -> Result<(), String> {
+    Err("On this device, new versions come from the download page.".into())
+}
+
 /// Checks for a newer version and downloads it in the background.
 /// Returns the new version once it's ready to install, or None if up to date.
+#[cfg(desktop)]
 #[tauri::command]
 async fn update_check(app: tauri::AppHandle, pending: State<'_, Pending>) -> Result<Option<UpdateInfo>, String> {
     use tauri_plugin_updater::UpdaterExt;
@@ -51,6 +68,7 @@ async fn update_check(app: tauri::AppHandle, pending: State<'_, Pending>) -> Res
 }
 
 /// Installs the downloaded update and restarts the app.
+#[cfg(desktop)]
 #[tauri::command]
 fn update_install(app: tauri::AppHandle, pending: State<'_, Pending>, eng: State<'_, Eng>) -> Result<(), String> {
     let Some((u, bytes)) = pending.0.lock().unwrap().take() else { return Err("No update is ready".into()) };
@@ -269,9 +287,11 @@ window.onerror = (m) => window.__TAURI__ && window.__TAURI__.core.invoke('selfte
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let engine = Engine::new();
-    tauri::Builder::default()
-        .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_process::init())
+    let builder = tauri::Builder::default();
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_updater::Builder::new().build()).plugin(tauri_plugin_process::init());
+    builder
+        .plugin(tauri_plugin_opener::init())
         .manage(Eng(engine))
         .manage(Pending::default())
         .manage(ai::Ai::default())
@@ -330,6 +350,7 @@ pub fn run() {
         .run(|app, event| {
             // A new version that finished downloading while the app was open installs as it closes,
             // so the next launch is already up to date.
+            #[cfg(desktop)]
             if let tauri::RunEvent::Exit = event {
                 use tauri::Manager;
                 let on = app.state::<AutoUpdate>().0.load(std::sync::atomic::Ordering::Relaxed);
