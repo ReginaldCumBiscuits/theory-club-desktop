@@ -7,8 +7,8 @@ BASE="https://github.com/microsoft/onnxruntime/releases/download/v$V"
 OUT="$(cd "$(dirname "$0")/.." && pwd)/src-tauri/ort"
 TMP="$(mktemp -d)"
 # pinned package checksums (Windows packages come from NuGet)
-SHA_ort="${SHA_ort:-}"
-SHA_dml="${SHA_dml:-}"
+SHA_ort="${SHA_ort:-a33ec2382b3c440bab74042a135733bb6e5085f293b908d3997688a58fe307e7}"
+SHA_dml="${SHA_dml:-4e7cb7ddce8cf837a7a75dc029209b520ca0101470fcdf275c1f49736a3615b9}"
 case "${1:-}" in
   windows-x64)
     # the DirectML build (graphics-card acceleration, falls back to the processor) and DirectML itself
