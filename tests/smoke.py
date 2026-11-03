@@ -119,6 +119,9 @@ async def features(browser):
     checks = [
         ('#tools-isolate', "!!document.querySelector('#tsfile')", 'transcriber page'),
         ('#course', "document.querySelectorAll('.crsst').length===8", 'course overview'),
+        ('#course-1', "document.querySelectorAll('.crsql li').length>=3&&!!document.querySelector('.crshrs')&&!!document.querySelector('a[href=\"#plan-new\"]')", 'course stage checkpoints, song plan and practice time'),
+        ('#journey', "[...document.querySelectorAll('.secnav a')].length===3&&(document.querySelector('.sbnav [aria-current]')||{}).textContent==='Course'", 'topic quizzes inside Course'),
+        ('#tools', "document.querySelectorAll('.toolgh').length===3", 'grouped tools'),
         ('#course-3', "document.querySelectorAll('[data-cg]').length>=4&&document.querySelectorAll('.crsgrid .panel').length>=5", 'course stage'),
         ('#home', "!!document.getElementById('skiplink')&&document.documentElement.lang==='en'&&!!document.getElementById('a11ylive')", 'skip link and screen reader announcements'),
         ('#tone-jimi-hendrix', "!!document.querySelector('.eqsvg')&&document.querySelectorAll('.tone .panel').length>=7", 'tone guide'),
@@ -146,6 +149,15 @@ async def features(browser):
             fail('fixing a note did not change it')
     except Exception as e:
         fail(f'fix a wrong note: {e}')
+    # play-along scoring: half the notes right, a quarter late, a quarter wrong
+    r = await pg.evaluate("(()=>{TS.res={part:'vocals',bpm:120,beats:[0,.5,1,1.5,2,2.5,3,3.5,4,4.5],notes:[0,1,2,3,4,5,6,7].map(i=>({t:.2+i*.5,m:60+i,d:.3})),chords:[],hits:[]};TS.view='lead';PLSC.frames=[];TS.res.notes.forEach((n,i)=>{const off=i%4===1?.2:0;for(let k=0;k<4;k++)PLSC.frames.push({t:n.t+off+k*.03,m:i%4===3?n.m+3:n.m})});PLSC.t0=0;PLSC.t1=4.5;const x=scEval();return x&&[x.hit,x.late,x.wrong,x.miss]})()")
+    if r != [4, 2, 2, 0]:
+        fail(f'play-along scoring: {r}, expected 4 right, 2 late, 2 wrong')
+    # practice time counts towards the course stage
+    s0 = await pg.evaluate("cSecs(cCurrent())")
+    await pg.evaluate("logPractice(120)")
+    if await pg.evaluate("cSecs(cCurrent())") - s0 != 120:
+        fail('practice time did not count towards the course stage')
     # lesson plan builder
     await pg.evaluate("h=>{location.hash=h}", '#plan-new')
     await pg.wait_for_timeout(400)
