@@ -124,6 +124,13 @@ jobs:
         shell: bash
         run: bash scripts/fetch-onnxruntime.sh "${{ matrix.tag }}"
 
+      - name: Check the AI runtime loads and runs
+        if: matrix.name != 'mac-intel'
+        shell: bash
+        run: |
+          L=$(ls src-tauri/ort/onnxruntime.dll src-tauri/ort/libonnxruntime.dylib 2>/dev/null | head -1)
+          TC_ORT="$PWD/$L" cargo test -p theory-club --lib --release ai:: -- --nocapture
+
       - name: Build the app
         run: tauri build ${{ matrix.args }}
 
@@ -159,8 +166,15 @@ jobs:
             dist/*.msi
             dist/*.dmg
 
+  android:
+    needs: prep
+    uses: ./.github/workflows/android.yml
+    with:
+      version: ${{ needs.prep.outputs.version }}
+    secrets: inherit
+
   publish:
-    needs: [prep, build]
+    needs: [prep, build, android]
     runs-on: ubuntu-latest
     env:
       VERSION: ${{ needs.prep.outputs.version }}
@@ -189,7 +203,7 @@ jobs:
 
   cleanup:
     # if a build fails, remove the half-made draft so nothing broken ships
-    needs: [prep, build]
+    needs: [prep, build, android]
     if: failure() && needs.prep.result == 'success'
     runs-on: ubuntu-latest
     steps:

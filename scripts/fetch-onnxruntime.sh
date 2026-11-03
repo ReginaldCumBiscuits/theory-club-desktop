@@ -6,8 +6,27 @@ V=1.23.0
 BASE="https://github.com/microsoft/onnxruntime/releases/download/v$V"
 OUT="$(cd "$(dirname "$0")/.." && pwd)/src-tauri/ort"
 TMP="$(mktemp -d)"
+# pinned package checksums (Windows packages come from NuGet)
+SHA_ort="${SHA_ort:-}"
+SHA_dml="${SHA_dml:-}"
 case "${1:-}" in
-  windows-x64) F="onnxruntime-win-x64-$V.zip";        SHA=72c23470310ec79a7d42d27fe9d257e6c98540c73fa5a1db1f67f538c6c16f2f ;;
+  windows-x64)
+    # the DirectML build (graphics-card acceleration, falls back to the processor) and DirectML itself
+    mkdir -p "$TMP/ort" "$TMP/dml"
+    curl -fsSL --retry 3 -o "$TMP/ort.zip" "https://www.nuget.org/api/v2/package/Microsoft.ML.OnnxRuntime.DirectML/$V"
+    curl -fsSL --retry 3 -o "$TMP/dml.zip" "https://www.nuget.org/api/v2/package/Microsoft.AI.DirectML/1.15.4"
+    for f in ort dml; do
+      GOT=$( (sha256sum "$TMP/$f.zip" 2>/dev/null || shasum -a 256 "$TMP/$f.zip") | cut -d' ' -f1)
+      WANT=$(eval echo "\${SHA_${f}:-}")
+      echo "$f package sha256 $GOT"
+      if [ -n "$WANT" ] && [ "$GOT" != "$WANT" ]; then echo "checksum mismatch for $f"; exit 1; fi
+    done
+    (cd "$TMP/ort" && unzip -q ../ort.zip) && (cd "$TMP/dml" && unzip -q ../dml.zip)
+    cp "$TMP/ort/runtimes/win-x64/native/onnxruntime.dll" "$OUT/onnxruntime.dll"
+    cp "$TMP/dml/bin/x64-win/DirectML.dll" "$OUT/DirectML.dll"
+    cp "$TMP/ort/LICENSE"* "$OUT/LICENSE-onnxruntime.txt" 2>/dev/null || cp "$TMP/ort/LICENSE.txt" "$OUT/LICENSE-onnxruntime.txt" 2>/dev/null || true
+    ls -la "$OUT"
+    exit 0 ;;
   mac-arm64)   F="onnxruntime-osx-arm64-$V.tgz";      SHA=8182db0ebb5caa21036a3c78178f17fabb98a7916bdab454467c8f4cf34bcfdf ;;
   mac-x64)     F="onnxruntime-osx-universal2-$V.tgz"; SHA=5e4365fb4a05aef353f6232b9a1848f37e608c421c9227e9224572205c0cfc08 ;;
   *) echo "usage: $0 windows-x64|mac-arm64|mac-x64"; exit 1 ;;

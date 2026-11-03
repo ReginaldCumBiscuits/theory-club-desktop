@@ -72,6 +72,10 @@ footer{margin-top:40px;color:var(--muted);font-size:13px}
    <li>The <b>installer (.exe)</b> is the easy choice. The <b>.msi</b> is for schools and offices that deploy software.</li>
    <li>If SmartScreen warns about an unknown publisher, choose <b>More info → Run anyway</b>.</li>
    <li>When you first join a jam room, allow Theory Club through Windows Firewall.</li></ul></section>
+  <section class="panel help"><h3>Android</h3><ul>
+   <li>Download the <b>.apk</b>, then open it from your notifications or Downloads.</li>
+   <li>Android asks to allow installing from your browser or Files app: choose <b>Settings → Allow from this source</b>, then go back and tap <b>Install</b>.</li>
+   <li>When a new version is out, the app shows a <b>Download</b> button. Install it the same way; your progress stays.</li></ul></section>
   <section class="panel help"><h3>Browser and phone</h3><ul>
    <li><b>Use it in your browser</b> works on any computer, tablet or phone.</li>
    <li>On iPhone or iPad, tap Share → <b>Add to Home Screen</b> to install it as an app. On Android, use the browser menu → <b>Install app</b>.</li>
@@ -89,12 +93,13 @@ const PLAT=[
  {k:'win',name:'Windows',sub:'Windows 10 and 11, with ASIO support',files:[['theory-club-windows-x64-setup.exe','Installer (.exe)'],['theory-club-windows-x64.msi','MSI package']]},
  {k:'arm',name:'Mac with Apple silicon',sub:'M1, M2, M3, M4 and newer',files:[['theory-club-mac-arm64.dmg','Disk image (.dmg)']]},
  {k:'x64',name:'Mac with Intel',sub:'Older Intel Macs',files:[['theory-club-mac-x64.dmg','Disk image (.dmg)']]},
+ {k:'android',name:'Android',sub:'Android 8 and newer phones and tablets',files:[['theory-club-android.apk','App (.apk)']]},
  {k:'web',name:'Web',sub:'Any browser, phone or tablet',files:[['app/','Use it in your browser',true],['theory-club-web.zip','Website files for Netlify or any host'],['theory-club-offline.html','Offline file (.html)']]}];
 const $=id=>document.getElementById(id);
 const mb=n=>n?(n/1048576).toFixed(n>1048576*10?0:1)+' MB':'';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 async function detect(){const ua=navigator.userAgent;let os='other',arch='';
- if(/Windows/.test(ua))os='win';else if(/iPhone|iPad|Android/.test(ua))os='mobile';else if(/Mac/.test(ua))os=navigator.maxTouchPoints>1?'mobile':'mac';
+ if(/Windows/.test(ua))os='win';else if(/Android/.test(ua))os='android';else if(/iPhone|iPad/.test(ua))os='mobile';else if(/Mac/.test(ua))os=navigator.maxTouchPoints>1?'mobile':'mac';
  if(os==='mac'&&navigator.userAgentData&&navigator.userAgentData.getHighEntropyValues){try{const h=await navigator.userAgentData.getHighEntropyValues(['architecture']);arch=h.architecture==='arm'?'arm':h.architecture==='x86'?'x64':''}catch(e){}}
  return{os,arch}}
 function url(rel,f){return f.endsWith('/')?f:(rel?rel.base+f:GH+'/releases/latest/download/'+f)}
@@ -102,6 +107,7 @@ function showPrimary(d){const p=$('primary'),h=$('primaryhint');const L=(f,label
  if(d.os==='win'){p.innerHTML=L('theory-club-windows-x64-setup.exe','Download for Windows')+L('app/','Use in browser','');h.textContent=''}
  else if(d.os==='mac'&&d.arch){p.innerHTML=L(d.arch==='arm'?'theory-club-mac-arm64.dmg':'theory-club-mac-x64.dmg','Download for Mac')+L('app/','Use in browser','');h.textContent=d.arch==='arm'?'For Macs with Apple silicon.':'For Intel Macs.'}
  else if(d.os==='mac'){p.innerHTML=L('theory-club-mac-arm64.dmg','Mac with Apple silicon')+L('theory-club-mac-x64.dmg','Mac with Intel','')+L('app/','Use in browser','');h.innerHTML='Not sure which Mac you have? Apple menu → About This Mac. “Chip: Apple M…” means Apple silicon.'}
+ else if(d.os==='android'){p.innerHTML=L('theory-club-android.apk','Download for Android')+L('app/','Use in browser','');h.textContent='Open the downloaded file to install it. See “First time opening it” below.'}
  else{p.innerHTML=L('app/','Open in your browser')+(d.os==='mobile'?'':L('theory-club-windows-x64-setup.exe','Windows','')+L('theory-club-mac-arm64.dmg','Mac',''));h.textContent=d.os==='mobile'?'Then add it to your home screen to use it like an app.':''}}
 function showRelease(rel){const have={};(rel&&rel.assets||[]).forEach(a=>have[a.name]=a.size);
  $('grid').innerHTML=PLAT.map(P=>`<section class="panel card"><h3>${P.name}</h3><span class="hint">${P.sub}</span><div class="files">${P.files.map(([f,label,always])=>{const ok=always?(!rel||rel.latest):(!rel||f in have);const href=always?f:url(rel,f);return`<a class="file ${ok?'':'missing'}" href="${ok?href:'#'}" ${ok&&!always?'download':''}>${esc(label)}<span>${always?(rel&&!rel.latest?'latest only':'opens now'):ok?mb(have[f])||'download':'not in this version'}</span></a>`}).join('')}</div></section>`).join('');
