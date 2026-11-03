@@ -31,10 +31,12 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - uses: android-actions/setup-android@v3
-
-      - name: Android SDK parts
-        run: sdkmanager --install "ndk;$NDK_VERSION" "platforms;android-35" "build-tools;35.0.0" > /dev/null
+      - name: Android SDK parts (the build machine already has the SDK)
+        run: |
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" --install "ndk;$NDK_VERSION" "platforms;android-35" "build-tools;35.0.0" > /dev/null
+          ls "$ANDROID_HOME/ndk"
 
       - uses: dtolnay/rust-toolchain@stable
         with:
