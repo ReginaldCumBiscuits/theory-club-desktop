@@ -1579,7 +1579,6 @@ function tone(m,t,dur,vel,timbre,fx){const c=AC;if(!c)return;m=Math.round(m);
   if(fx&&fx.soft){g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(v,t+.012)}else g.gain.setValueAtTime(v,t);g.gain.setValueAtTime(v,Math.max(t+.02,end-.09));g.gain.linearRampToValueAtTime(.0001,end);if(fx)pitchFx(src,t,end,fx);src.connect(g).connect(slapOut(g,fx,timbre==='guitar'&&gtrOut()!==MASTER?gtrOut():busFor(timbre)));src.start(t);src.stop(end+.02);return}
  toneOsc(m,t,dur,vel,timbre)}
 function prewarm(kind){const run=()=>{try{const ms=kind==='bass'?[28,33,36,38,40,43,45]:kind==='piano'?[48,52,55,60,64,67,72]:[40,45,47,50,52,55,57,59,62,64];ms.forEach(m=>kind==='piano'?pianoBuf(m):ksBuf(m,kind))}catch(e){}};if(window.requestIdleCallback)requestIdleCallback(run,{timeout:2000});else setTimeout(run,300)}
-function makeRoom(c){const sr=c.sampleRate,L=Math.floor(sr*1.4);const b=c.createBuffer(2,L,sr);for(let ch=0;ch<2;ch++){const d=b.getChannelData(ch);let lp=0;for(let i=0;i<L;i++){lp=lp*.55+(Math.random()*2-1)*.45;d[i]=lp*Math.pow(1-i/L,3.2)*(i<sr*.01?i/(sr*.01):1)}}const cv=c.createConvolver();cv.buffer=b;return cv}
 /* drum kit */
 function metallic(t,dec,peak,bp,hp){const c=AC;const g=c.createGain();env(g,t,peak,dec);const b=c.createBiquadFilter();b.type='bandpass';b.frequency.value=bp;b.Q.value=.8;const h=c.createBiquadFilter();h.type='highpass';h.frequency.value=hp;
  [2,3,4.16,5.43,6.79,8.21].forEach(r=>{const o=c.createOscillator();o.type='square';o.frequency.value=40*r*(1+Math.random()*.002);o.connect(b);o.start(t);o.stop(t+dec+.05)});b.connect(h).connect(g).connect(MASTER)}
@@ -3530,62 +3529,6 @@ function staffEvents(ex,ch){const den=ex.den||4;const q=d=>d/ex.per*(4/den);cons
 /* Bars are laid out in justified rows, with rhythm stems and beams under the staff, technique marks
    (hammer-on and pull-off arcs, slides, bend arrows, vibrato, palm-mute brackets), chord names and a moving cursor. */
 let TABW=0;function tabProWidth(){const w=TABW||innerWidth-40;return Math.max(300,Math.min(1180,w-10))}
-function tabPro(ex){const S=ex.S,n=S.length,per=ex.per,beats=ex.beats,den=ex.den||4,bar=beats*per;const v16=d=>d*(16/den)/per;const items=ex.items;
- const nb=Math.max(1,Math.ceil(ex.steps/bar));const W=tabProWidth();const LS=13,top=34,staffH=(n-1)*LS,stemTop=top+staffH+8,stemLen=22;const H=top+staffH+52;
- const minW=26,unit=Math.max(11,Math.min(18,W/62));
- // bar contents
- const bars=[];for(let b=0;b<nb;b++)bars.push({b,idx:[]});items.forEach((it,i)=>{const b=Math.min(nb-1,Math.floor(it.st/bar));bars[b].idx.push(i)});
- const noteW=i=>{const it=items[i];const cols=it.col?it.col.length:1;const txt=Math.max(...(it.col||[it.pos||{f:''}]).map(p=>String(p.f).length));return Math.max(minW+(txt>1?6:0),v16(Math.min(it.dur,bar-(it.st%bar)))*unit)};
- bars.forEach(B=>{B.w=24+B.idx.reduce((a,i)=>a+noteW(i),0);if(!B.idx.length)B.w=Math.max(90,bar*unit*.5)});
- // rows
- const lead=n===4?30:30,firstExtra=34;const rows=[];let cur=[],cw=0;bars.forEach(B=>{const avail=W-lead-(rows.length===0?firstExtra:0)-6;if(cur.length&&cw+B.w>avail){rows.push(cur);cur=[];cw=0}cur.push(B);cw+=B.w});if(cur.length)rows.push(cur);
- const y=s=>top+(n-1-s)*LS;const names=S.map(m=>SHARPN[m%12]);
- const out=[];let prevPos={};
- rows.forEach((row,ri)=>{const first=ri===0;const x0=lead+(first?firstExtra:0);const natural=row.reduce((a,B)=>a+B.w,0);const avail=W-x0-6;const stretch=(ri<rows.length-1||natural>avail*.72)?avail/natural:1;
-  let g='';for(let s=0;s<n;s++)g+=`<line class="sl" x1="${lead-4}" x2="${x0+natural*stretch}" y1="${y(s)}" y2="${y(s)}"/>`;
-  names.forEach((nm,s)=>g+=`<text class="sn" x="${lead-10}" y="${y(s)+4}" text-anchor="end">${nm}</text>`);
-  g+=`<line class="blx" x1="${lead-4}" x2="${lead-4}" y1="${y(n-1)}" y2="${y(0)}"/>`;
-  if(first){const cy=top+staffH/2;g+=`<text class="ts" x="${lead+14}" y="${cy-2}" text-anchor="middle">${beats}</text><text class="ts" x="${lead+14}" y="${cy+17}" text-anchor="middle">${den}</text>`}
-  let x=x0;const pmRuns=[];let pmStart=null,pmLast=null;
-  row.forEach(B=>{const bw=B.w*stretch;const bx=x;g+=`<text class="bn" x="${bx+3}" y="${top-12}">${B.b+1}</text>`;
-   let nx=bx+14*stretch;const pos=[];B.idx.forEach(i=>{const w=noteW(i)*stretch;pos.push({i,x:nx+8,w});nx+=w});
-   // rests at the start of a bar
-   if(B.idx.length){const lead16=v16(items[B.idx[0]].st-B.b*bar);if(lead16>=1){g+=`<text class="rest" x="${bx+12}" y="${stemTop+18}">${lead16>=4?'𝄽':lead16>=2?'𝄾':'𝄿'}</text>`}}else g+=`<text class="rest" x="${bx+bw/2-6}" y="${stemTop+18}">𝄼</text>`;
-   // beams: group notes by beat
-   const grp=den===8&&beats%3===0?3*per:per;const groups={};
-   pos.forEach(p=>{const it=items[p.i];const d=v16(Math.min(it.dur,(B.b+1)*bar-it.st));p.d=d;const k=Math.floor((it.st-B.b*bar)/grp);(groups[k]=groups[k]||[]).push(p)});
-   pos.forEach(p=>{const it=items[p.i];const cx=p.x;const cols=it.col||[it.pos];const isTrip=[2/1.5,4/1.5,8/1.5,1/1.5].some(t=>Math.abs(p.d-t)<.05);
-    // chord name
-    if(it.chord&&it.chord.length>=3){const nm=(identify(it.chord)[0]||{}).name;if(nm)g+=`<text class="cn" x="${cx}" y="${top-12}" text-anchor="middle">${nm}</text>`}
-    cols.forEach(c=>{if(!c)return;const f=String(c.f);const txt=it.ghost?`(${f})`:it.harm?`<${f}>`:f;const tw=Math.max(10,txt.length*7.4+4);g+=`<rect class="tb" data-c="${p.i}" x="${cx-tw/2}" y="${y(c.s)-7}" width="${tw}" height="14" rx="3"/><text class="tn${f==='x'?' dead':''}" data-c="${p.i}" x="${cx}" y="${y(c.s)+4.3}" text-anchor="middle">${esc(txt)}</text>`});
-    // technique marks
-    const mk=it.mk||'';const toks=mk.split(/\s+/).filter(Boolean);const has=t=>toks.includes(t);const s0=(cols[0]||{s:0}).s;const pv0=prevPos[s0];const pv=pv0&&pv0.row===ri?pv0:null;
-    if((has('h')||has('p')||has('t'))&&pv){const xa=pv.x+5,xb=cx-5,yy=y(s0)-9;g+=`<path class="arc" d="M${xa} ${yy} Q${(xa+xb)/2} ${yy-11} ${xb} ${yy}"/><text class="tq" x="${(xa+xb)/2}" y="${yy-10}" text-anchor="middle">${has('p')?'P':has('t')?'T':'H'}</text>`}
-    cols.forEach(c=>{if(!c)return;const yy=y(c.s);const p2=prevPos[c.s];const near=p2&&p2.row===ri&&cx-p2.x<300;
-     if(has('/')||has('\\')){const up=has('/');const xa=near?p2.x+8:cx-22,xb=cx-8;g+=`<line class="sld" x1="${xa}" x2="${xb}" y1="${yy+(up?4:-4)}" y2="${yy+(up?-4:4)}"/>`}
-     if(has('si/')||has('si\\')){const up=has('si/');g+=`<line class="sld" x1="${cx-22}" x2="${cx-8}" y1="${yy+(up?5:-5)}" y2="${yy+(up?-1:1)}"/>`}
-     if(has('so/')||has('so\\')){const up=has('so/');g+=`<line class="sld" x1="${cx+8}" x2="${cx+22}" y1="${yy+(up?1:-1)}" y2="${yy+(up?-5:5)}"/>`}});
-    if(toks.some(t=>t==='b'||t==='r')){const amt=it.bend!=null?it.bend:2;const lab=amt>=4?'2':amt===3?'1½':amt===1?'½':'full';const yy=y(s0);const ty=top-20;g+=`<path class="bend" d="M${cx+7} ${yy} Q${cx+16} ${yy} ${cx+16} ${ty+6}"/><path class="bendh" d="M${cx+12} ${ty+10} L${cx+16} ${ty+3} L${cx+20} ${ty+10}"/><text class="bl" x="${cx+16}" y="${ty}" text-anchor="middle">${lab}</text>`;if(has('r'))g+=`<path class="bend" d="M${cx+20} ${ty+6} Q${cx+24} ${ty+6} ${cx+26} ${yy-6}"/>`}
-    if(mk.includes('~')){let w='';const xa=cx+8,len=Math.max(14,p.w-14);for(let k=0;k<len;k+=6)w+=`${k?'':'M'+(xa)+' '+(top-6)} q1.5 -3 3 0 q1.5 3 3 0 `;g+=`<path class="vib" d="${w}"/>`}
-    if(it.stac)g+=`<circle class="stac" cx="${cx}" cy="${y(0)+11}" r="1.8"/>`;
-    if(it.pm){if(pmStart==null)pmStart=cx;pmLast=cx}else if(pmStart!=null){pmRuns.push([pmStart,pmLast]);pmStart=null}
-    if(it.letRing)g+=`<text class="tq" x="${cx}" y="${top-24}" text-anchor="middle">let ring</text>`;
-    cols.forEach(c=>{if(c)prevPos[c.s]={x:cx,row:ri}});
-    // stem
-    const d=p.d;if(d<16-.01){const half=d>=8-.01;g+=`<line class="stem" x1="${cx}" x2="${cx}" y1="${stemTop}" y2="${stemTop+(half?stemLen*.55:stemLen)}"/>`}
-    if([3,6,12,1.5].some(t=>Math.abs(d-t)<.01))g+=`<circle class="stac" cx="${cx+5}" cy="${stemTop+stemLen-2}" r="1.6"/>`});
-   // beams and flags
-   Object.values(groups).forEach(gp=>{const sm=gp.filter(p=>p.d<4-.01);const yb=stemTop+stemLen;
-    if(sm.length>=2){const xa=sm[0].x,xb=sm[sm.length-1].x;g+=`<rect class="beam" x="${xa-.6}" y="${yb-3}" width="${xb-xa+1.2}" height="3"/>`;
-     sm.forEach((p,j)=>{if(p.d>1.5)return;const nx=sm[j+1],pv=sm[j-1];if(nx&&nx.d<=1.5)g+=`<rect class="beam" x="${p.x-.6}" y="${yb-8}" width="${nx.x-p.x+1.2}" height="3"/>`;else if(!(pv&&pv.d<=1.5)){const dir=nx?1:-1;g+=`<rect class="beam" x="${dir>0?p.x:p.x-8}" y="${yb-8}" width="8" height="3"/>`}});
-     if(sm.some(p=>[2/1.5,1/1.5,4/1.5].some(t=>Math.abs(p.d-t)<.05)))g+=`<text class="tq" x="${(xa+xb)/2}" y="${yb+11}" text-anchor="middle">3</text>`}
-    else if(sm.length===1){const p=sm[0];const fl=p.d<=1.01?2:1;for(let f=0;f<fl;f++)g+=`<path class="flag" d="M${p.x} ${yb-f*5}c4-3 7-5 6-11c-1 4-3 6-6 7z"/>`}});
-   x+=bw;g+=`<line class="blx" x1="${x}" x2="${x}" y1="${y(n-1)}" y2="${y(0)}"/>`});
-  if(pmStart!=null)pmRuns.push([pmStart,pmLast]);pmRuns.forEach(([a,b])=>{g+=`<text class="tq pm" x="${a-6}" y="${top-6}">P.M.</text>${b>a+10?`<line class="pml" x1="${a+18}" x2="${b+6}" y1="${top-9}" y2="${top-9}"/><line class="pml" x1="${b+6}" x2="${b+6}" y1="${top-12}" y2="${top-6}"/>`:''}`});
-  if(ri===rows.length-1)g+=`<rect class="endbar" x="${x+2}" y="${y(n-1)}" width="3" height="${staffH}"/>`;
-  g+=`<rect class="tcursor" x="-2" y="${top-8}" width="3" height="${staffH+16}" rx="1.5"/>`;
-  out.push(`<div class="tline tprow"><svg class="tab tabpro" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Tab, bars ${row[0].b+1} to ${row[row.length-1].b+1}">${g}</svg></div>`)});
- return`<div class="tabpro-wrap">${out.join('')}</div>`}
 /* the smooth cursor: glides from the note being played towards the next one */
 function tabCursor(host,i,secs){const el=host.querySelector(`.tabpro [data-c="${i}"]`);if(!el)return;const svg=el.closest('svg');const c=svg.querySelector('.tcursor');if(!c)return;
  host.querySelectorAll('.tabpro .tcursor.on').forEach(x=>{if(x!==c)x.classList.remove('on')});const x=+el.getAttribute('x')+(+el.getAttribute('width')||0)/2;
@@ -3771,26 +3714,7 @@ function bindForYou(root){root.querySelectorAll('[data-weak]').forEach(a=>a.oncl
 /* onboarding */
 const INST_DESC={guitar:'Electric or acoustic',bass:'4 or 5 strings',piano:'Piano or keyboard',drums:'Kit or practice pad',ableton:'Make music in Ableton Live',logic:'Make music in Logic Pro',midi:'Controllers, programming, MIDI keyboards'};
 const LEVEL_DESC=[['Beginner','New to it, or know a few chords or beats'],['Intermediate','Comfortable with the basics, filling in the theory'],['Advanced','Play confidently and want depth']];
-function openOnboarding(){const p=PROFILE()||{};const st={name:p.name||'',insts:(p.insts||[]).slice(),level:p.level!=null?p.level:LEVEL(),genres:(p.genres||[]).slice()};let step=0;
- let ov=document.getElementById('onb');if(!ov){ov=document.createElement('div');ov.id='onb';ov.className='onb';ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');ov.setAttribute('aria-labelledby','onbt');document.body.appendChild(ov)}
- const steps=['name','insts','level','genres'];
- const render=()=>{const s=steps[step];let body='';
-  if(s==='name')body=`<h2 id="onbt">Welcome to Theory Club</h2><p class="lede">A few quick questions so the app fits how you play. You can change any of this later in Settings.</p><label class="onbf" for="onbname">What should we call you?<input id="onbname" autocomplete="given-name" maxlength="40" placeholder="Your first name"></label>`;
-  if(s==='insts')body=`<h2 id="onbt">What do you play?</h2><p class="lede">Pick everything you want to learn. The first one you pick is where you start.</p><div class="onbgrid">${['guitar','bass','piano','drums','voice','ableton','logic','midi'].map(i=>`<button class="onbcard" data-i="${i}" aria-pressed="${st.insts.includes(i)}"><b>${INST_NAME[i]}</b><span>${INST_DESC[i]}</span>${st.insts[0]===i&&st.insts.length>1?'<em>Starting here</em>':''}</button>`).join('')}</div>`;
-  if(s==='level')body=`<h2 id="onbt">How well do you play?</h2><p class="lede">This sets your practice questions and your learning plan.</p><div class="onbgrid one">${LEVEL_DESC.map(([n,d],i)=>`<button class="onbcard" data-l="${i}" aria-pressed="${st.level===i}"><b>${n}</b><span>${d}</span></button>`).join('')}</div>`;
-  if(s==='genres')body=`<h2 id="onbt">What music do you love?</h2><p class="lede">Pick as many as you like. Songs, jams and your daily picks will lean this way.</p><div class="onbchips">${GENRES.map(([k,n])=>`<button class="pill" data-g="${k}" aria-pressed="${st.genres.includes(k)}">${n}</button>`).join('')}</div>`;
-  const can=s!=='insts'||st.insts.length>0;
-  ov.innerHTML=`<div class="onbcard-wrap"><div class="onbdots" aria-hidden="true">${steps.map((_,i)=>`<i class="${i<=step?'on':''}"></i>`).join('')}</div>${body}<div class="row onbnav">${step?'<button class="btn" id="onbback">Back</button>':'<span></span>'}<button class="btn primary" id="onbnext" ${can?'':'disabled'}>${step===steps.length-1?'Start learning':'Continue'}</button></div></div>`;
-  const nm=ov.querySelector('#onbname');if(nm){nm.value=st.name;nm.oninput=()=>st.name=nm.value.trim();nm.onkeydown=e=>{if(e.key==='Enter')next()};setTimeout(()=>nm.focus(),50)}
-  ov.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{const i=b.dataset.i;st.insts=st.insts.includes(i)?st.insts.filter(x=>x!==i):[...st.insts,i];render()});
-  ov.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{st.level=+b.dataset.l;render()});
-  ov.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{const g=b.dataset.g;st.genres=st.genres.includes(g)?st.genres.filter(x=>x!==g):[...st.genres,g];b.setAttribute('aria-pressed',st.genres.includes(g))});
-  const bk=ov.querySelector('#onbback');if(bk)bk.onclick=()=>{step--;render()};ov.querySelector('#onbnext').onclick=next;
-  if(!nm){const f=ov.querySelector('#onbnext');if(f&&!f.disabled)f.focus()}};
- const next=()=>{if(steps[step]==='insts'&&!st.insts.length)return;if(step<steps.length-1){step++;render();return}
-  store.set('profile',{name:st.name,insts:st.insts,level:st.level,genres:st.genres,at:Date.now()});store.set('inst',st.insts[0]);store.set('level',st.level);store.set('welcomed',true);store.set('ptopics',topicPool(st.insts));store.set('sgenre',null);
-  ov.remove();syncHeader();if(!store.get('toured',false))setTimeout(()=>{try{startTour()}catch(e){}},900);prewarm(st.insts[0]==='drums'?'guitar':st.insts[0]==='piano'?'piano':st.insts[0]);if(location.hash&&location.hash!=='#home')location.hash='#home';else route()};
- render()}
+
 
 /* settings */
 function openSettings(){const ov=document.getElementById('setpanel'),body=document.getElementById('setbody');document.getElementById('sett').textContent='Settings';document.getElementById('setclose').textContent='Done';ov.dataset.welcome='';
@@ -4357,7 +4281,6 @@ const JAZZY=new Set(['bossa','gypsy','cafe']);
 
 /* ---------- saved grooves ---------- */
 function myGrooves(){return store.get('mygrooves',[])}
-function grooveMeter(g){return g.meter||(g.steps===12&&!g.groups?'4/4':'4/4')}
 
 /* one step of the band, played into `out` (the speakers, or a MIDI or audio file) */
 function bandStep(st,abs,t,sd,out){const{jid,g,chords,on,fillN,kit,inst,bassStyle,chordInst}=st;const steps=g.steps;const cs=chords;if(!cs.length)return;const bi=Math.floor(abs/steps),b=bi%cs.length,s=abs%steps,half=Math.floor(steps/2),c=cs[b],n=cs[(b+1)%cs.length];const R=bassRootMidi(c.root);
@@ -4688,21 +4611,7 @@ window.addEventListener('scroll',syncTitle,{passive:true});
 /* --- home --- */
 function playStreak(){const L=store.get('plog',{});let n=0;const d=new Date();if(!(L[todayKey(d)]>30))d.setDate(d.getDate()-1);while(L[todayKey(d)]>30){n++;d.setDate(d.getDate()-1)}return n}
 function weekMinutes(){const L=store.get('plog',{});let t=0;const d=new Date();for(let i=0;i<7;i++){t+=L[todayKey(d)]||0;d.setDate(d.getDate()-1)}return Math.round(t/60)}
-function viewHome(){const inst=INST();const p=PROFILE()||{};const log=store.get('dailylog',{}),dDone=!!log[todayKey()];const due=srsDue().length;const seq=planSeq();const done=store.get('planDone',{});const next=seq.find(s=>!done[s.id]);const last=store.get('lastplace',null);const nice=new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'});const wm=weekMinutes(),goal=(store.get('planMins',30)||30)*(store.get('planDays',[1,3,5,6]).length||4);
- const card=(href,eyebrow,title,sub,cls='')=>`<a class="hcard ${cls}" href="${href}"><span class="eyebrow">${eyebrow}</span><b>${title}</b>${sub?`<span class="hint">${sub}</span>`:''}</a>`;
- main.innerHTML=`<div class="pagehead"><div class="stack" style="gap:6px"><span class="eyebrow">${esc(nice)}</span><h1>${esc(greet())}</h1><p class="lede">${INST_NAME[INST_RAW()]} · ${['Beginner','Intermediate','Advanced'][LEVEL()]||''}</p></div></div>
- <div class="stack">
- <div class="hstats"><div><b>${playStreak()}</b><span>day streak</span></div><div><b>${wm}</b><span>minutes this week</span><i class="hbar"><i style="width:${Math.min(100,Math.round(wm/goal*100))}%"></i></i><small class="hint">Goal ${goal} min</small></div><div><b>${store.get('cleanLoops',0)||0}</b><span>clean run-throughs</span></div><div><b>${store.get('sessionsDone',0)||0}</b><span>sessions done</span></div></div>
- <section class="panel hsess"><div><span class="eyebrow">Practice session</span><h3>${SESSION?`In progress: ${esc(SESSION.blocks[SESSION.i].name)}`:'Got some time? Let the app plan it.'}</h3><p class="hint">Warm-up, your next lesson, a drill and a jam, with a timer for each part.</p></div><div class="row">${SESSION?`<a class="btn primary" href="${SESSION.blocks[SESSION.i].href}">Carry on</a>`:[15,30,60].map(m=>`<button class="btn ${m===30?'primary':''}" data-sess="${m}">${m===60?'1 hour':m+' min'}</button>`).join('')}</div></section>
- <div class="hgrid">
-  ${last&&last.h?card('#'+last.h,'Continue where you left off',esc(last.title||'Last page'),'','hc-cont'):''}
-  ${next?card(next.href||'#learn-'+next.learn,'Next lesson',esc(next.t),esc(next.task||'')):''}
-  ${card('#daily','Daily challenge',dDone?'Done today ✓':'Today’s 5 questions',dDone?'Come back tomorrow for a new one.':'Same questions for everyone, every day.',dDone?'hc-done':'')}
-  ${card('#review','Review',due?`${due} item${due>1?'s':''} due`:'Nothing due','Licks and songs come back just before you’d forget them.')}
-  ${card('#warmup','Warm-up','Five minutes','Loosen up before you play.')}
-  ${card('#tools-jam','Jam along','Play with the band',esc((JAMS.find(j=>j.id===jamFor())||{}).name||''))}
- </div></div>`;
- main.querySelectorAll('[data-sess]').forEach(b=>b.onclick=()=>sessStart(sessionBlocks(+b.dataset.sess)))}
+function viewHome(){return viewToday()}
 
 /* --- ⌘K search --- */
 function cmdIndex(){const inst=INST(),pitched=inst!=='drums';const out=[];const add=(t,h,k,g)=>out.push({t,h,k:(t+' '+(k||'')).toLowerCase(),g});
@@ -6129,7 +6038,7 @@ function weekSummaryHTML(){const L=store.get('plog',{})||{};const now=new Date()
   ${pk||tr.length?`<div class="wrec">${pk?`<span>Pocket: <b>${gvMs(Math.round(pk.avg))}</b>, ±${Math.round(pk.sd)} ms at ${pk.bpm} BPM</span>`:''}${tr.length?`<span>Tempo record: <b>${esc(tr[0].t)}</b> at ${tr[0].bpm} BPM${tr.length>1?` (+${tr.length-1} more)`:''}</span>`:''}</div>`:''}
   ${pg?`<a class="wpath" href="#path-${P.id}"><span class="eyebrow">${esc(P.name)} path</span><i class="hbar"><i style="width:${Math.round(pg.d/pg.n*100)}%"></i></i><small class="hint">${pg.d} of ${pg.n}</small></a>`:''}
   ${next?`<a class="wnext" href="${next.h}" data-jam="${next.jam||''}"><span class="eyebrow">Suggested next</span><b>${esc(next.t)}</b><span class="hint">${esc(next.s)}</span></a>`:''}</section>`}
-{const _vh=viewHome;viewHome=function(){_vh();const hs=main.querySelector('.hstats');if(hs&&!main.querySelector('.wsum')){hs.insertAdjacentHTML('afterend',weekSummaryHTML());const a=main.querySelector('.wnext[data-jam]');if(a&&a.dataset.jam)a.addEventListener('click',()=>{JAMPICK=a.dataset.jam})}}}
+
 
 /* ---------- jam: shared chord chart ---------- */
 const JC_MAX=32;
@@ -7326,9 +7235,7 @@ function viewJourneyQuiz(key){const u=jUnits().flat().find(x=>x.key===key);if(!u
 /* routes, sidebar, Home and lesson pages */
 {const _r=route;route=function(){const h=location.hash.slice(1);if(h==='journey'||h.startsWith('jq-')){stopSeq();stopLoop();stopDemo();QUIZ=null;clearInterval(WU_T);focusOff();renderChrome('journey');if(h==='journey')viewJourney();else viewJourneyQuiz(h.slice(3));return}_r()}}
 SBI.journey='<svg viewBox="0 0 16 16"><path d="M3 13.5c2-4 8-1 10-6"/><circle cx="3" cy="13.5" r="1.5"/><path d="M11 2.5h3.5v3.5"/><path d="M14.5 2.5 10 7"/></svg>';
-function jHomeCard(){const units=jUnits();const S=jStore();const lv=jCurLevel();const U=units[lv];const done=U.filter(u=>S[u.key]&&S[u.key].passed).length;const next=U.find(u=>!(S[u.key]&&S[u.key].passed));
- return`<a class="hcard jhome" href="${next?'#jq-'+next.key:'#journey'}"><span class="eyebrow">Learning journey · ${JLV[lv]}</span><b>${next?esc(next.t):'Level complete'}</b><i class="hbar"><i style="width:${Math.round(done/U.length*100)}%"></i></i><span class="hint">${done} of ${U.length} topics passed${next?' · take the quiz':''}</span></a>`}
-{const _vh=viewHome;viewHome=function(){_vh();const g=main.querySelector('.hgrid');if(g&&!g.querySelector('.jhome'))g.insertAdjacentHTML('afterbegin',jHomeCard())}}
+
 {const _vl=viewLearn;viewLearn=function(id){_vl(id);const lid=id||'';const u=jUnits().flat().find(x=>x.lessons.includes(lid)&&jUnlocked(x.lv));const lb=main.querySelector('#lb')||main.querySelector('.lbody');if(!u||!lb||lb.querySelector('.jcta'))return;const s=jStore()[u.key];
  const add=()=>{if(lb.querySelector('.jcta'))return;lb.insertAdjacentHTML('beforeend',`<section class="panel jcta"><div><span class="eyebrow">Learning journey · ${JLV[u.lv]}</span><h3>Quiz: ${esc(u.t)}</h3><p class="hint">${JN} questions, pass mark ${JPASS}.${s?` Your best: ${s.best}/${JN}${s.passed?' ✓':''}.`:''}</p></div><a class="btn primary" href="#jq-${u.key}">${s&&s.passed?'Retake':'Take'} the quiz</a></section>`)};add();setTimeout(add,60)}}
 
@@ -7378,7 +7285,7 @@ function viewLibrary(){const secs=learnSections();let q=store.get('libq','')||''
  const add=()=>{if(!main.querySelector('.lback'))(main.querySelector('.learn')||lb).insertAdjacentHTML('beforebegin',top);if(!lb.querySelector('.lpn'))lb.insertAdjacentHTML('beforeend',foot)};add();setTimeout(add,80)}}
 /* ---------- Tools grid ---------- */
 const TOOL_DESC={jam:'Play along with a backing band',online:'Jam live with friends',read:'Sight-reading practice',findnote:'Find notes fast on your instrument',slow:'Slow a song down without changing pitch',transcribe:'Play and see it as tab',metronome:'Click, subdivisions and gap click',tuner:'Tune with your instrument plugged in',finder:'Name any chord',play:'Play freely'};
-function viewToolsHub(){main.innerHTML=`<div class="pagehead"><div class="stack" style="gap:6px"><span class="eyebrow">Tools</span><h1>Tools</h1></div></div><div class="toolgrid">${toolsFor().map(([k,t])=>`<a class="hcard toolcard" href="#tools-${k}"><span class="ic">${SBI['tool_'+k]||''}</span><b>${esc(t)}</b><span class="hint">${esc(TOOL_DESC[k]||'')}</span></a>`).join('')}</div>`}
+function viewToolsHub(){return viewPlay()}
 {const _vt=viewTools;viewTools=function(id){_vt(id);const sn=main.querySelector('nav.subnav');if(sn)sn.outerHTML=`<a class="back" href="#tools">‹ Tools</a>`}}
 /* ---------- Practice hub ---------- */
 function viewTrain(){const due=srsDue().length;const log=store.get('dailylog',{})||{},dDone=!!log[todayKey()];const card=(href,eyebrow,title,sub,cls='')=>`<a class="hcard ${cls}" href="${href}"><span class="eyebrow">${eyebrow}</span><b>${title}</b>${sub?`<span class="hint">${sub}</span>`:''}</a>`;
@@ -7391,7 +7298,7 @@ function viewTrain(){const due=srsDue().length;const log=store.get('dailylog',{}
  if(h==='learn'||h==='train'||h==='tools'){stopSeq();stopLoop();stopDemo();QUIZ=null;clearInterval(WU_T);focusOff();renderChrome(h);if(h==='learn')viewLibrary();else if(h==='train')viewTrain();else viewToolsHub();navAddSub();return}
  _r();navAddSub()}}
 /* Home: lighter. The week summary already has the streak and minutes, so the stat row goes; jam and warm-up live in Practice. */
-{const _vh=viewHome;viewHome=function(){_vh();if(main.querySelector('.wsum')){const hs=main.querySelector('.hstats');if(hs)hs.remove()}main.querySelectorAll('.hgrid a[href="#warmup"],.hgrid a[href="#tools-jam"]').forEach(a=>a.remove());const hs2=main.querySelector('.hsess');if(hs2)hs2.remove()}}
+
 {const tb=document.querySelector('#tabbar a[data-tb="practice"]');if(tb)tb.setAttribute('href','#train')}
 
 /* ================= v35: song pages that teach more, and sound like the style ================= */
@@ -7632,7 +7539,7 @@ setInterval(()=>{try{const R=remindCfg();if(!R.notify||!('Notification' in windo
  const k=todayKey();if(store.get('remindLast','')===k)return;if(((store.get('plog',{})||{})[k]||0)>=60)return;store.set('remindLast',k);const w=weekDaysPlayed();const g=store.get('goalDays',4);
  const n=new Notification('Time to practise',{body:w.days<g?`${w.days} of ${g} days so far this week. Ten minutes counts.`:'You’ve hit this week’s goal. A short session keeps the streak going.',tag:'tc-remind'});n.onclick=()=>{window.focus();location.hash='#train';n.close()}}catch(e){}},30000);
 /* Home: the goal at a glance */
-{const _vh=viewHome;viewHome=function(){_vh();const g=main.querySelector('.hgrid');if(!g||g.querySelector('.goalc'))return;const w=weekDaysPlayed(),gd=store.get('goalDays',4);g.insertAdjacentHTML('beforeend',`<a class="hcard goalc ${w.days>=gd?'hc-done':''}" href="#progress"><span class="eyebrow">Weekly goal</span><b>${w.days} of ${gd} days</b><i class="hbar"><i style="width:${Math.min(100,w.days/gd*100)}%"></i></i><span class="hint">${w.days>=gd?'Goal reached this week ✓':`${gd-w.days} more day${gd-w.days>1?'s':''} to go`}${remindCfg().notify?'':' · set a reminder'}</span></a>`)}}
+
 
 /* ================= v36: drum and piano lessons ================= */
 Object.assign(TECHX,{"drums": {"rockbeat": {"how": ["Right hand plays eighths on the closed hi-hat.", "Left hand hits the snare on beats 2 and 4, the backbeat.", "Right foot plays the kick on beats 1 and 3.", "Count “1 and 2 and” out loud until it feels automatic."], "mist": ["Hitting the hi-hat as hard as the snare. The backbeat should be the loudest.", "Rushing when the kick and snare line up."], "move": {"name": "Hands, then feet", "desc": "A bar of hi-hat and snare only, then add the kick.", "bpm": 80, "grid": {"per": 4, "rows": {"hat": "x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.", "snare": "....x.......x.......x.......x...", "kick": "................x.......x......."}, "steps": 32}, "bars": 2}, "phrase": {"name": "Groove with a fill", "desc": "Three bars of groove with kick variations and a snare fill into the crash.", "bpm": 100, "grid": {"per": 4, "rows": {"crash": "x...............................................................", "hat": "..x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.........", "snare": "....x.......x.......x.......x.......x.......x.......x...x.x.xxxx", "kick": "x.......x.......x.......x.x.....x.....x.x.......x.......x......."}, "steps": 64}, "bars": 4}}, "heavy": {"how": ["The snare moves to beat 3, so everything feels half as fast.", "Play quarter notes on the hi-hat or ride, big and steady.", "Let each hit ring: space is what makes it heavy."], "mist": ["Rushing the space before the snare.", "Too many kick notes, which loses the weight."], "move": {"name": "Snare on 3", "desc": "Quarter-note hats and the snare on beat 3, then add the kick.", "bpm": 70, "grid": {"per": 4, "rows": {"hat": "x...x...x...x...x...x...x...x...", "snare": "........x...............x.......", "kick": "................x.........x....."}, "steps": 32}, "bars": 2}, "phrase": {"name": "Heavy four bars", "desc": "Half-time with a crash, kick variations and a slow tom fill.", "bpm": 76, "grid": {"per": 4, "rows": {"crash": "x...............................................................", "hat": "....x...x...x...x...x...x...x...x...x...x...x...x...x...........", "snare": "........x...............x...............x...............x.......", "kick": "x.x.......xx....x.........x.....x.x.......x.x...x...............", "tom1": "............................................................x.x.", "tom2": "..............................................................x."}, "steps": 64}, "bars": 4}}, "fills": {"how": ["A fill replaces the last beat or two of a bar.", "Play it with alternating hands: right, left, right, left.", "Move from high tom to low tom, then land on a crash and kick on beat 1.", "Keep counting through the fill so you come out on time."], "mist": ["Speeding up during the fill.", "Forgetting the crash on the next “1”."], "move": {"name": "One-beat fill", "desc": "A bar of groove, then a bar with four sixteenths on the snare at the end.", "bpm": 80, "grid": {"per": 4, "rows": {"hat": "x.x.x.x.x.x.x.x.x.x.x.x.x.x.....", "snare": "....x.......x.......x.......xxxx", "kick": "x.......x.......x.......x......."}, "steps": 32}, "bars": 2}, "phrase": {"name": "Around the toms", "desc": "Groove, a two-beat tom fill, groove, then an eighth-note fill around the kit.", "bpm": 92, "grid": {"per": 4, "rows": {"crash": "x...............................x...............................", "hat": "..x.x.x.x.x.x.x.x.x.x.x...........x.x.x.x.x.x.x.x.x.x.x.........", "snare": "....x.......x.......x...xxxx........x.......x.......x...x.x.....", "kick": "x.......x.......x...............x.......x.......x...............", "tom1": "............................xx..............................x.x.", "tom2": "..............................xx..............................x."}, "steps": 64}, "bars": 4}}, "ghost16": {"how": ["Sixteenths on the hi-hat with one hand, or alternating hands if it’s fast.", "Ghost notes are tiny taps on the snare, the stick only a couple of centimetres above the head.", "Keep the backbeat loud: the contrast is the whole sound."], "mist": ["Ghost notes too loud, so they crowd the backbeat.", "Hi-hat sixteenths uneven."], "move": {"name": "Loud and quiet", "desc": "Sixteenth hats with the backbeat, then add the ghost notes.", "bpm": 72, "grid": {"per": 4, "rows": {"hat": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", "snare": "....x.......x....o..x..o.o..x..o", "kick": "x.......x.......x.......x......."}, "steps": 32}, "bars": 2}, "phrase": {"name": "Ghost-note groove", "desc": "Four bars with ghost notes moving around and syncopated kicks.", "bpm": 96, "grid": {"per": 4, "rows": {"hat": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx....", "snare": ".o..x..o.o.ox..o.o..x.o..o..x.o..o..x..o.o.ox..o.o..x..o.o..xxxx", "kick": "x.x...x...x.....x.....x.x.......x.x...x...x.....x.....x.x......."}, "steps": 64}, "bars": 4}}, "halfshuffle": {"how": ["Hi-hat plays the shuffle: the first and third note of each triplet.", "Snare on beat 3, half-time.", "Ghost notes go on the middle triplet, very softly."], "mist": ["Straightening out the triplets.", "Ghost notes as loud as the backbeat."], "move": {"name": "Triplet hats, then the backbeat", "desc": "Shuffle hats alone, then add the snare on 3 and the kick.", "bpm": 72, "grid": {"per": 3, "rows": {"hat": "x.xx.xx.xx.xx.xx.xx.xx.x", "snare": "..................x.....", "kick": "............x........x.."}, "steps": 24}, "bars": 2}, "phrase": {"name": "Half-time shuffle groove", "desc": "Four bars of the half-time shuffle with ghost notes and a triplet fill.", "bpm": 86, "grid": {"per": 3, "rows": {"hat": "x.xx.xx.xx.xx.xx.xx.xx.xx.xx.xx.xx.xx.xx.x......", "snare": ".o..o.x...o..o..o.x..o...o..o.x...o..o..o.xxxxxx", "kick": "x........x..x.......x...x........x..x..........."}, "steps": 48}, "bars": 4}}, "shuffle": {"how": ["Count triplets: “1-trip-let 2-trip-let”. The hi-hat plays the “1” and the “let”.", "Snare on 2 and 4, kick on 1 and 3.", "Lean back: a shuffle should feel lazy, not rushed."], "mist": ["Playing it straight.", "Rushing the short note."], "move": {"name": "Hats, then the kit", "desc": "The shuffle on the hi-hat alone, then with kick and snare.", "bpm": 80, "grid": {"per": 3, "rows": {"hat": "x.xx.xx.xx.xx.xx.xx.xx.x", "snare": "...............x.....x..", "kick": "............x.....x....."}, "steps": 24}, "bars": 2}, "phrase": {"name": "Shuffle with a turnaround", "desc": "Three bars of shuffle, then a triplet fill on the snare.", "bpm": 96, "grid": {"per": 3, "rows": {"crash": "x...............................................", "hat": "..xx.xx.xx.xx.xx.xx.xx.xx.xx.xx.xx.xx.xx.x......", "snare": "...x.....x.....x.....x.....x.....x.....x..xxxxxx", "kick": "x.....x.....x.....x..x..x.....x.....x..........."}, "steps": 48}, "bars": 4}}, "onedrop": {"how": ["Beat 1 is empty: that “drop” is the sound of the style.", "Kick and rim click land together on beat 3.", "Hi-hat plays a light, swung pattern on top."], "mist": ["Playing the kick on beat 1 out of habit.", "A heavy hi-hat that buries the rim click."], "move": {"name": "Nothing on one", "desc": "Hats and the rim click on 3, then the kick joins the rim.", "bpm": 70, "grid": {"per": 4, "rows": {"hat": "x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.", "rim": "........x...............x.......", "kick": "........................x......."}, "steps": 32}, "bars": 2}, "phrase": {"name": "One-drop groove", "desc": "The one drop with open hats, a rim variation and a small fill.", "bpm": 76, "grid": {"per": 4, "rows": {"hat": "x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.........", "rim": "........x...............x...............x...x...........x.......", "kick": "........x...............x...............x...............x.......", "open": "..............................x.................................", "snare": "............................................................x.x.", "tom1": ".............................................................x.x"}, "steps": 64}, "bars": 4}}, "swing": {"how": ["The ride plays “spang, spang-a-lang”: quarter notes with a skip note before beats 2 and 4.", "Hi-hat foot closes on 2 and 4.", "Kick “feathers” very softly on every beat; the snare adds comments."], "mist": ["A loud kick that sounds like rock.", "Straight eighths on the ride."], "move": {"name": "The ride pattern", "desc": "Ride alone, then add the hi-hat foot on 2 and 4.", "bpm": 100, "grid": {"per": 3, "rows": {"ride": "x..x.xx..x.xx..x.xx..x.x", "hat": "...............x.....x.."}, "steps": 24}, "bars": 2}, "phrase": {"name": "Swing with comping", "desc": "Ride, hi-hat, feathered kick and a few snare comments.", "bpm": 130, "grid": {"per": 3, "rows": {"ride": "x..x.xx..x.xx..x.xx..x.xx..x.xx..x.xx..x.xx..x.x", "hat": "...x.....x.....x.....x.....x.....x.....x.....x..", "kick": "o..o..o..o..o..o..o..o..o..o..o..o..o..o..o..x..", "snare": ".................o.....o..............o.....xo.x"}, "steps": 48}, "bars": 4}}, "toms": {"how": ["The floor tom takes the place of the hi-hat.", "Accent the beats so it drives like a train.", "Let the tom ring a little between hits."], "mist": ["Hitting the floor tom off-centre, so it sounds thin.", "Losing the pulse when the accents move."], "move": {"name": "Floor tom and kick", "desc": "Eighths on the floor tom, then the kick on every beat underneath.", "bpm": 96, "grid": {"per": 4, "rows": {"tom2": "x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.", "kick": "................x...x...x...x..."}, "steps": 32}, "bars": 2}, "phrase": {"name": "Tribal toms", "desc": "The floor-tom groove with accents on the high tom and a crash at the top.", "bpm": 120, "grid": {"per": 4, "rows": {"crash": "x...............................................................", "tom2": "..x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.........", "tom1": "..........x.......x.......x.......x...x...x.............xxxx....", "kick": "x...x...x...x...x...x...x...x...x...x...x...x...x...x...x...x...", "snare": "............................................................xxxx"}, "steps": 64}, "bars": 4}}, "doublekick": {"how": ["Alternate feet: right, left, right, left, evenly.", "Play from the ankles with the heels up for speed.", "Start at a slow tempo. Evenness before speed."], "mist": ["One foot louder than the other.", "Tensing the legs, which makes it gallop by accident."], "move": {"name": "Eighths, then sixteenths", "desc": "Alternating feet in eighths, then twice as fast.", "bpm": 80, "grid": {"per": 4, "rows": {"kick": "x.x.x.x.x.x.x.x.xxxxxxxxxxxxxxxx", "snare": "....x.......x.......x.......x..."}, "steps": 32}, "bars": 2}, "phrase": {"name": "Double-kick barrage", "desc": "Sixteenths on the kicks under a half-time backbeat, with a break at the end.", "bpm": 100, "grid": {"per": 4, "rows": {"crash": "x...............................x...............x.......x.......", "hat": "....x.......x...x...x...x...x.......x.......x...................", "snare": "........x...............x...............x...........x.......xxxx", "kick": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.......x......."}, "steps": 64}, "bars": 4}}, "disco": {"how": ["Kick on every beat: the “four on the floor”.", "Open the hi-hat on every “and”, close it on the beat.", "Snare (or a clap) on 2 and 4."], "mist": ["Closing the open hat too late, so it washes.", "A kick that drifts ahead of the click."], "move": {"name": "Kick, then hats", "desc": "Four on the floor, then add the open hats and snare.", "bpm": 100, "grid": {"per": 4, "rows": {"kick": "x...x...x...x...x...x...x...x...", "hat": "................x...x...x...x...", "open": "..................x...x...x...x.", "snare": "....................x.......x..."}, "steps": 32}, "bars": 2}, "phrase": {"name": "Dance-floor groove", "desc": "Disco with sixteenth hats, a snare build and a crash.", "bpm": 116, "grid": {"per": 4, "rows": {"crash": "x...............................................................", "kick": "x...x...x...x...x...x...x...x...x...x...x...x...x...x...x...x...", "hat": "....x...x...x...xx.xxx.xxx.xxx.xx...x...x...x...x...x...........", "open": "..x...x...x...x...x...x...x...x...x...x...x...x.................", "snare": "....x.......x.......x.......x.......x.......x.......x...xxxxxxxx"}, "steps": 64}, "bars": 4}}}, "piano": {"ballad": {"how": ["Keep the top notes of the right hand close together from chord to chord: move as little as possible.", "The left hand plays the root (or the bass note after the slash).", "Press the sustain pedal just after each new chord, not on it, to avoid blur."], "mist": ["Jumping the whole hand to root position every time.", "Holding the pedal through chord changes."], "move": {"name": "Inversions that move a little", "desc": "C, G/B, C and F/A: the right hand barely moves.", "bpm": 66, "chords": [["C", [48, 60, 64, 67], 8], ["G/B", [47, 62, 67, 71], 8], ["C", [48, 60, 64, 67], 8], ["F/A", [45, 60, 65, 69], 8]], "bars": 2}, "phrase": {"name": "Ballad progression", "desc": "Eight chords with smooth voice leading and a falling bass line.", "bpm": 72, "chords": [["C", [48, 60, 64, 67], 8], ["G/B", [47, 62, 67, 71], 8], ["Am", [45, 60, 64, 69], 8], ["Em/G", [43, 59, 64, 67], 8], ["F", [41, 60, 65, 69], 8], ["C/E", [40, 60, 64, 67], 8], ["Dm7", [38, 60, 65, 69], 8], ["G", [43, 59, 62, 67], 8]], "bars": 4}}, "boogie": {"how": ["The left hand climbs root, 3rd, 5th, 6th, ♭7 and back down.", "Keep it steady and a little detached.", "When the chord changes, the same pattern starts on the new root."], "mist": ["Rushing the top of the pattern.", "Uneven eighths."], "move": {"name": "The pattern on C", "desc": "The left-hand pattern twice on C.", "bpm": 90, "notes": [[36, "C"], [40, "E"], [43, "G"], [45, "A"], [46, "Bb"], [45, "A"], [43, "G"], [40, "E"], [36, "C"], [40, "E"], [43, "G"], [45, "A"], [46, "Bb"], [45, "A"], [43, "G"], [40, "E"]], "dur": 2, "bars": 2}, "phrase": {"name": "Boogie through the changes", "desc": "C, F, C and G: the same shape on each root.", "bpm": 120, "notes": [[36, "C"], [40, "E"], [43, "G"], [45, "A"], [46, "Bb"], [45, "A"], [43, "G"], [40, "E"], [41, "F"], [45, "A"], [48, "C"], [50, "D"], [51, "Eb"], [50, "D"], [48, "C"], [45, "A"], [36, "C"], [40, "E"], [43, "G"], [45, "A"], [46, "Bb"], [45, "A"], [43, "G"], [40, "E"], [43, "G"], [47, "B"], [50, "D"], [52, "E"], [53, "F"], [52, "E"], [50, "D"], [47, "B"]], "dur": 2, "bars": 4}}, "alberti": {"how": ["Low, high, middle, high: a broken chord in an even rhythm.", "Keep the hand still over the chord and let the fingers do the work.", "Play it quieter than the melody it supports."], "mist": ["Accenting the thumb on every repeat.", "Lifting the hand between notes."], "move": {"name": "Alberti on C and G7", "desc": "The pattern on C, then G7 with B in the bass.", "bpm": 80, "notes": [[48, "C"], [55, "G"], [52, "E"], [55, "G"], [48, "C"], [55, "G"], [52, "E"], [55, "G"], [47, "B"], [55, "G"], [53, "F"], [55, "G"], [47, "B"], [55, "G"], [53, "F"], [55, "G"]], "dur": 2, "bars": 2}, "phrase": {"name": "Classical accompaniment", "desc": "C, F/C, G7/B and C, the left hand of a sonatina.", "bpm": 100, "notes": [[48, "C"], [55, "G"], [52, "E"], [55, "G"], [48, "C"], [55, "G"], [52, "E"], [55, "G"], [48, "C"], [57, "A"], [53, "F"], [57, "A"], [48, "C"], [57, "A"], [53, "F"], [57, "A"], [47, "B"], [55, "G"], [53, "F"], [55, "G"], [47, "B"], [55, "G"], [53, "F"], [55, "G"], [48, "C"], [55, "G"], [52, "E"], [55, "G"], [48, "C"], [52, "E"], [55, "G"], [60, "C"]], "dur": 2, "bars": 4}}, "arps": {"how": ["Spread the chord one note at a time, up and back down.", "Cross the thumb under (going up) and the hand over (coming down) smoothly.", "Keep a steady eighth-note pulse."], "mist": ["A bump where the thumb crosses.", "Letting the tempo sag on the way down."], "move": {"name": "C up and down", "desc": "The C arpeggio across two octaves, twice.", "bpm": 72, "notes": [[48, "C"], [52, "E"], [55, "G"], [60, "C"], [64, "E"], [60, "C"], [55, "G"], [52, "E"], [48, "C"], [52, "E"], [55, "G"], [60, "C"], [64, "E"], [60, "C"], [55, "G"], [52, "E"]], "dur": 2, "bars": 2}, "phrase": {"name": "Four-chord arpeggios", "desc": "C, Am, F and G, the same shape on each.", "bpm": 84, "notes": [[48, "C"], [52, "E"], [55, "G"], [60, "C"], [64, "E"], [60, "C"], [55, "G"], [52, "E"], [45, "A"], [48, "C"], [52, "E"], [57, "A"], [60, "C"], [57, "A"], [52, "E"], [48, "C"], [41, "F"], [45, "A"], [48, "C"], [53, "F"], [57, "A"], [53, "F"], [48, "C"], [45, "A"], [43, "G"], [47, "B"], [50, "D"], [55, "G"], [59, "B"], [55, "G"], [50, "D"], [47, "B"]], "dur": 2, "bars": 4}}, "waltz": {"how": ["Beat 1: a low bass note. Beats 2 and 3: a short chord higher up.", "Make the bass note the strongest, and the chords light.", "Feel it in one big beat per bar."], "mist": ["Chords as loud as the bass.", "Holding the chords so the waltz loses its lilt."], "move": {"name": "Oom-pah-pah on C", "desc": "Two bars of the waltz pattern on C.", "bpm": 100, "beats": 3, "chords": [["C", [36], 4], ["C", [52, 55, 60], 4], ["C", [52, 55, 60], 4], ["C", [43], 4], ["C", [52, 55, 60], 4], ["C", [52, 55, 60], 4]], "bars": 2}, "phrase": {"name": "Waltz in C", "desc": "C, G7, G7 and C with the bass moving between root and 5th.", "bpm": 120, "beats": 3, "chords": [["C", [36], 4], ["C", [52, 55, 60], 4], ["C", [52, 55, 60], 4], ["G7", [43], 4], ["G7", [53, 55, 59], 4], ["G7", [53, 55, 59], 4], ["G7", [38], 4], ["G7", [53, 55, 59], 4], ["G7", [53, 55, 59], 4], ["C", [36], 4], ["C", [52, 55, 60], 4], ["C", [52, 55, 60], 4]], "bars": 4}}, "jazzvoicings": {"how": ["Leave the root to the bass player: play the 3rd, 7th and a colour note.", "Move each finger to the nearest note of the next chord.", "Dm9 to G13 needs only one note to move."], "mist": ["Adding the root back in, which muddies it.", "Big jumps between voicings."], "move": {"name": "Dm9 to G13", "desc": "Two rootless chords that differ by one note.", "bpm": 80, "chords": [["Dm9", [53, 57, 60, 64], 8], ["G13", [53, 57, 59, 64], 8], ["Dm9", [53, 57, 60, 64], 8], ["G13", [53, 57, 59, 64], 8]], "bars": 2}, "phrase": {"name": "ii–V–I and back", "desc": "Dm9, G13, Cmaj9 and Am9, voiced close together.", "bpm": 90, "chords": [["Dm9", [53, 57, 60, 64], 8], ["G13", [53, 57, 59, 64], 8], ["Cmaj9", [52, 55, 59, 62], 8], ["Am9", [48, 52, 55, 59], 8], ["Dm9", [53, 57, 60, 64], 8], ["G13", [53, 57, 59, 64], 8], ["Cmaj9", [52, 55, 59, 62], 16]], "bars": 4}}}});
@@ -7650,7 +7557,7 @@ songWorkout=function(inst,techs){const X=TECHX[inst]||{};let ks=techs.filter(k=>
  const x=X[sel];if(!x||step==='study')return studyEx(inst,sel);const d=x[step];const nm=`${TECH[inst][sel].name}: ${d.name}`;const ex=specEx(inst,d,nm);ex.title=nm;return ex}}
 /* ================= v36: routes for licks and ear training ================= */
 NAV_SUB.train.splice(5,0,['licks','Licks'],['ear','Ear training']);
-{const _ns=navSection;navSection=function(h){h=h||'home';if(h==='licks'||h==='ear'||h.startsWith('lick-'))return'train';return _ns(h)}}
+
 {const _sub=navSubHTML;navSubHTML=function(h){return _sub(h&&h.startsWith('lick-')?'licks':h)}}
 {const _r=route;route=function(){const h=location.hash.slice(1)||'home';if(h==='licks'||h==='ear'||h.startsWith('lick-')){stopSeq();stopLoop();stopDemo();QUIZ=null;clearInterval(WU_T);focusOff();renderChrome(h);if(h==='licks')viewLicks();else if(h==='ear')viewEar();else viewLick(h.slice(5));navAddSub();return}_r()}}
 {const _vt=viewTrain;viewTrain=function(){_vt();const g=main.querySelector('.hgrid');if(!g)return;const li=lickInst();const L=li?LICKLIB[li]:[];const S=lickStore();const n=L.filter(l=>S[l.id]&&S[l.id].learned).length;
@@ -7659,17 +7566,15 @@ NAV_SUB.train.splice(5,0,['licks','Licks'],['ear','Ear training']);
 /* ================= v37: a guided tour ================= */
 const TOUR=[
  {t:'Welcome to Theory Club',b:'A one-minute look around so you know where everything lives. You can skip at any point and replay it from Settings.'},
- {sel:['#sidebar nav a[href="#home"]','#tabbar a[data-tb="daily"]'],t:'Home',b:'Your day at a glance: this week’s practice, your weekly goal, what to do next and the daily challenge.'},
- {sel:['#sidebar nav a[href="#journey"]'],more:true,t:'Journey',b:'Your path from beginner to experienced. Each topic has a lesson and a 20-question quiz; pass them all to unlock the next level.'},
- {sel:['#sidebar nav a[href="#learn"]','#tabbar a[data-tb="learn"]'],t:'Learn',b:'Every lesson in one place: your instrument, groove and feel, theory and home recording. Search to find one fast.'},
- {sel:['#sidebar nav a[href="#songs"]','#tabbar a[data-tb="songs"]'],t:'Songs',b:'Learn from the legends with lessons in each song’s style. Import your own tabs, then transpose them, add a capo, or play along with your own recording.'},
- {sel:['#sidebar nav a[href="#train"]','#tabbar a[data-tb="practice"]'],t:'Practice',b:'Guided sessions, the daily challenge, drills, reviews, the lick library (any key, with a band) and ear training.'},
- {sel:['#sidebar nav a[href="#tools"]'],more:true,t:'Tools',b:'Tuner, metronome, jam along with a band, slow down a song, chord finder and more.'},
- {sel:['#sidebar nav a[href="#progress"]'],more:true,t:'Progress',b:'Your stats, goals and practice reminders, plus the code that moves your progress to another device.'},
- {sel:['#inbtn'],t:'Connect your instrument',b:'Plug in or use the microphone. Then the app can hear you: it marks notes right or wrong, checks your chords, and runs the tuner and ear training. Headphones help.'},
+ {sel:['#sidebar nav a[href="#home"]','#tabbar a[data-tb="home"]'],t:'Today',b:'Press Start today’s practice and the app takes you through a short session built from your course stage, aimed at what you find hard.'},
+ {sel:['#sidebar nav a[href="#course"]','#tabbar a[data-tb="course"]'],t:'Learn',b:'Your course, stage by stage: goals to tick, an animated demo with Check me, checkpoint quizzes and every lesson.'},
+ {sel:['#sidebar nav a[href="#play"]','#tabbar a[data-tb="play"]'],t:'Play',b:'Songs and play-alongs, the song transcriber, jamming with a band or friends, and tools like the chord finder.'},
+ {sel:['#sidebar nav a[href="#progress"]','#tabbar a[data-tb="progress"]'],t:'You',b:'Your practice charts, notes, recordings and backups.'},
+ {sel:['#ptbtn'],t:'Practice timer',b:'Time you practise counts towards your course stage. It can count only while it hears you play.'},
+ {sel:['#inbtn'],t:'Connect your instrument',b:'Plug in or use the microphone. Then the app can hear you: Check me, Score my playing, the tuner and ear training all use it. Headphones help.'},
  {sel:['#cmdbtn'],t:'Search',b:'Find any lesson, song or tool by name. On a computer, press ⌘K or Ctrl+K.'},
- {sel:['#setbtn'],t:'Settings',b:'Switch instrument, change sounds and theme, back up your progress, and replay this tour.'},
- {t:'You’re ready',b:'A good first step: take the first Journey quiz, or try today’s daily challenge.',end:true}];
+ {sel:['#setbtn'],t:'Settings',b:'Switch instrument, set a practice reminder, change sounds and theme, back up your progress, and replay this tour.'},
+ {t:'You’re ready',b:'A good first step: press Start today’s practice on the Today page.',end:true}];
 function tourVisible(el){if(!el)return false;const r=el.getBoundingClientRect();return r.width>0&&r.height>0&&r.left>=0&&r.right<=innerWidth+1&&r.top>=0&&r.bottom<=innerHeight+1&&getComputedStyle(el).visibility!=='hidden'}
 function startTour(){if(document.getElementById('tour'))return;closeSidebar&&closeSidebar();let i=0;
  const ov=document.createElement('div');ov.id='tour';ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');ov.setAttribute('aria-labelledby','tourt');ov.innerHTML='<div class="thole"></div><div class="tbub"></div>';document.body.appendChild(ov);
@@ -7689,9 +7594,7 @@ function startTour(){if(document.getElementById('tour'))return;closeSidebar&&clo
  const key=e=>{if(e.key==='Escape'){e.preventDefault();done()}else if(e.key==='ArrowRight'&&i<TOUR.length-1){e.preventDefault();i++;draw()}else if(e.key==='ArrowLeft'&&i>0){e.preventDefault();i--;draw()}};
  addEventListener('resize',draw);addEventListener('keydown',key,true);draw()}
 /* offer it: right after the welcome questions, and once on Home for people who never saw it */
-{const _vh=viewHome;viewHome=function(){_vh();if(store.get('toured',false)||main.querySelector('.tourc'))return;const ph=main.querySelector('.pagehead');if(!ph)return;
- ph.insertAdjacentHTML('afterend',`<section class="panel tourc row" style="justify-content:space-between;align-items:center"><div><b>New here?</b> <span class="hint">Take a one-minute tour of where everything is.</span></div><div class="row"><button class="btn small" id="tourno">No thanks</button><button class="btn primary small" id="tourgo">Take the tour</button></div></section>`);
- main.querySelector('#tourgo').onclick=startTour;main.querySelector('#tourno').onclick=()=>{store.set('toured',true);main.querySelector('.tourc').remove()}}}
+
 
 /* ================= v38: both clefs, taught before they're tested ================= */
 /* your instrument's own clef: bass reads bass clef, piano reads both, everyone else treble */
@@ -8157,10 +8060,7 @@ function viewMyPlan(){const S=store.get('lplan',null);if(!S||!S.plan){viewPlanBu
  if((m=h.match(/^learn-tech-([a-z]+)-([a-z0-9]+)$/))){const inst=m[1],k=m[2];if(!techT(inst)[k]){location.hash='#home';return}stopSeq();stopLoop();stopDemo();QUIZ=null;renderChrome('journey');viewJTech(Math.max(0,techDiff(inst,k)),{inst,keys:[k],title:techT(inst)[k].name,quizKey:'-',noQuiz:true,back:'#plan',href:'#'+h});const c=main.querySelector('.jtcard');if(c)c.open=true;return}
  _r()}}
 /* entry points: Home and the journey page */
-{const _vh=viewHome;viewHome=function(){_vh();const g=main.querySelector('.hgrid');if(!g||g.querySelector('.phome'))return;const S=store.get('lplan',null);const P=S&&S.plan;let html;
- if(P){const d=S.done||{};const n=P.weeks.filter((_,i)=>d[i]).length;const nx=P.weeks.find((_,i)=>!d[i]);html=`<a class="hcard phome" href="#plan"><span class="eyebrow">My lesson plan</span><b>${nx?(nx.kind==='song'?esc(nx.title):nx.kind==='check'?'Checkpoint':'Foundations'):'Plan complete'}</b><i class="hbar"><i style="width:${Math.round(n/P.weeks.length*100)}%"></i></i><span class="hint">${n} of ${P.weeks.length} lessons · ${P.icons.slice(0,3).map(esc).join(', ')}${P.icons.length>3?'…':''}</span></a>`}
- else html=`<a class="hcard phome" href="#plan-new"><span class="eyebrow">New</span><b>Build a lesson plan</b><span class="hint">Pick up to five musicians you love and learn through their songs.</span></a>`;
- const j=g.querySelector('.jhome');if(j)j.insertAdjacentHTML('afterend',html);else g.insertAdjacentHTML('afterbegin',html)}}
+
 {const _rb=roadBar;roadBar=function(){const h=_rb();return h.replace('<a class="btn small','<a class="btn small" href="#plan">Lesson plan from my icons</a><a class="btn small')}}
 
 /* ================= v40: look up any musician ================= */
@@ -8368,7 +8268,7 @@ function viewToneHome(){let inst=['guitar','bass','drums','piano','voice'].inclu
   if(h==='tone')return viewToneHome();if(h==='tone-basics')return viewToneBasics();
   const n=Object.keys(TONE).find(x=>'tone-'+toneSlug(x)===h);if(n)return viewTone(n);location.hash='#tone';return}
  stopToneDemo();_r()}}
-{const _vh=viewHome;viewHome=function(){_vh();const g=main.querySelector('.hgrid');if(!g||g.querySelector('.thome'))return;const html=`<a class="hcard thome" href="#tone"><span class="eyebrow">New</span><b>Tone & gear</b><span class="hint">Get your heroes' sound: their gear, amp settings, EQ and how their records were made.</span></a>`;const p=g.querySelector('.phome');if(p)p.insertAdjacentHTML('afterend',html);else g.insertAdjacentHTML('beforeend',html)}}
+
 {const _vs=viewSongs;viewSongs=function(){const r=_vs.apply(this,arguments);try{main.querySelectorAll('.legend .lhead h3').forEach(h=>{const n=toneFind(h.textContent);if(n&&!h.parentNode.querySelector('.tlink'))h.insertAdjacentHTML('afterend',`<a class="tlink hint" href="#tone-${toneSlug(n)}">Tone & gear ›</a>`)})}catch(e){}return r}}
 {const _pw=planWeekHTML;planWeekHTML=function(P,w,i,done){let h=_pw(P,w,i,done);try{
  if(w.kind==='song'){const n=toneFind(w.icon);if(n){const T=TONE[n];const e=toneEraFor(T,w.year);const g=e?e[1].slice(0,3).map(x=>esc(x[1])).join(', '):'';h=h.replace('<div class="lgrid">',`<div class="lgrid"><div class="ptone"><h4>Get the sound</h4><p>${g?`Around ${w.year}, ${esc(n)} used: ${g}.`:esc(T.sig)} <a href="#tone-${toneSlug(n)}">Tone & gear guide</a></p></div>`)}}
@@ -8848,8 +8748,7 @@ function viewVoice(tab){tab=VS_TABS.some(t=>t[0]===tab)?tab:(store.get('vstab','
  else if(tab==='health'){b.innerHTML=vsHealthHTML();vsWireHealth(b,()=>viewVoice('health'))}else if(tab==='progress')b.innerHTML=vsProgressHTML()}
 /* routes, home card, links from lessons and techniques */
 {const _r=route;route=function(){const h=location.hash.slice(1);if(h==='voice'||h.startsWith('voice-')){stopSeq();stopLoop();stopDemo();QUIZ=null;renderChrome('journey');viewVoice(h.slice(6)||null);return}_r()}}
-{const _vh=viewHome;viewHome=function(){_vh();const g=main.querySelector('.hgrid');if(!g||g.querySelector('.vshome'))return;const voice=INST_RAW()==='voice'||((store.get('profile',{})||{}).insts||[]).includes('voice');if(!voice)return;const W=store.get('vswork',{})||{};const t=W[todayKey()];const r=vsRange();
- g.insertAdjacentHTML('afterbegin',`<a class="hcard vshome" href="#voice-workout"><span class="eyebrow">Voice studio</span><b>${t&&t.done.length?`Today: ${t.done.length} step${t.done.length>1?'s':''} done`:'Today\'s vocal workout'}</b><span class="hint">${r?`About 15 minutes in your range, ${svName(r.lo)} to ${svName(r.hi)}.`:'Start by finding your range: it takes a minute.'}</span></a>`)}}
+
 {const _sb=sessionBlocks;sessionBlocks=function(m){const B=_sb(m);if(INST_RAW()!=='voice')return B;return B.map(b=>b.href==='#learn-sv-warmup'?{...b,name:'Vocal workout',href:'#voice-workout',what:'The Voice studio\'s daily routine, in your range.'}:b)}}
 const VS_TECHMAP={breath:'breath',sirens:'workout',headvoice:'range',falsetto:'range',mixvoice:'range',belt:'dynamics',vibratov:'sustain',runs:'workout',legatov:'sustain',diction:'sight',blend:'sight',scat:'sight'};
 {const _vj=viewJTech;viewJTech=function(lv,o){_vj(lv,o);try{const inst=(o&&o.inst)||jtInst();if(inst!=='voice')return;main.querySelectorAll('.jtcard').forEach(d=>{const k=d.dataset.k;const T=techT('voice')[k];if(!T)return;let tab=VS_TECHMAP[k];if(!tab){const n=(T.name+' '+T.desc).toLowerCase();tab=/breath|support/.test(n)?'breath':/vibrato|sustain|hold|legato/.test(n)?'sustain':/range|head|falsetto|chest|mix|register|passaggio/.test(n)?'range':/loud|belt|dynamic|power/.test(n)?'dynamics':/read|interval|harmony|ear/.test(n)?'sight':'workout'}
@@ -9208,8 +9107,8 @@ let _joLeaveRaw=null;
    setTimeout(joRejoin(code,mine,mine?Object.assign({},sess||{},{playing:false}):null,mine?'You\'re hosting this room now.':'',mine?20:24,5000),mine?1500:6000);return r}}
  return _jl.apply(this,arguments)}}
 /* ================= v45: a tidier Home, and what's new ================= */
-const WN_VER='v51';
-const WN_ITEMS=[['Song play-alongs','In Songs: the app\'s band plays the chords of 22 well-known songs, plus traditional tunes with the melody, to play along with and score.','#songs'],['Watch, then check','Each course stage has an animated demo. Press Check me and the app listens to see if you\'ve got it.','#course'],['Smarter practice','Today\'s practice now works on what you find hard, ends with a summary, and can remind you at a set time.','#home'],['A calmer Theory Club','Four sections instead of seven: Today, Learn, Play and You. Today has one button that builds your practice from your course stage.','#home'],['Score my playing','In the song transcriber, tick “Score my playing” and the app listens while you play along, then shows what you hit, missed or played late.','#tools-isolate'],['One place to learn','Journey is now Course: your stages, topic quizzes and song plans together, with practice hours that count up as you play. Try the practice timer at the top.','#course'],['AI separation','In the desktop app, a trained AI model now separates vocals, bass, drums and the rest far more cleanly, so transcriptions are much more accurate. And you can fix any wrong note yourself.','#tools-isolate'],['Your full course','A realistic plan from complete beginner to college level for every instrument and DAW, with goals, songs and a daily routine.','#course'],['Sharper transcriptions','The song transcriber now finds the tempo, chords, vocal melody, bass line and drums far more accurately.','#tools-isolate'],['Accessibility settings','Larger text, high contrast, reduced motion and an easy-to-read font, in Settings. Plus full keyboard and screen reader support.','settings'],['Automatic updates','The desktop app checks for a new version every time it opens and updates itself.','settings'],['Song transcriber','Add a song, isolate the vocals, guitar, bass or drums, get tab and play along.','#tools-isolate'],['Voice studio','A daily vocal workout in your own range, with pitch, vibrato and breath feedback.','#voice'],['Tone & gear','How 207 players get their sound, with EQ, settings and a tone match.','#tone'],['Lesson plans from your heroes','Pick up to five musicians and learn through their careers. Look up anyone.','#plan-new'],['Jam online','Record every player, reconnect on its own, and keep the room going if the host leaves.','#tools-online'],['Back up everything','Save all your progress to a file from Settings, and restore it on another device.','settings']];
+const WN_VER='v52';
+const WN_ITEMS=[['More to play','25 more song play-alongs and 6 more traditional tunes, with search. Animated demos now cover every course stage, and the DAW courses too.','#songs'],['Song play-alongs','In Songs: the app\'s band plays the chords of 22 well-known songs, plus traditional tunes with the melody, to play along with and score.','#songs'],['Watch, then check','Each course stage has an animated demo. Press Check me and the app listens to see if you\'ve got it.','#course'],['Smarter practice','Today\'s practice now works on what you find hard, ends with a summary, and can remind you at a set time.','#home'],['A calmer Theory Club','Four sections instead of seven: Today, Learn, Play and You. Today has one button that builds your practice from your course stage.','#home'],['Score my playing','In the song transcriber, tick “Score my playing” and the app listens while you play along, then shows what you hit, missed or played late.','#tools-isolate'],['One place to learn','Journey is now Course: your stages, topic quizzes and song plans together, with practice hours that count up as you play. Try the practice timer at the top.','#course'],['AI separation','In the desktop app, a trained AI model now separates vocals, bass, drums and the rest far more cleanly, so transcriptions are much more accurate. And you can fix any wrong note yourself.','#tools-isolate'],['Your full course','A realistic plan from complete beginner to college level for every instrument and DAW, with goals, songs and a daily routine.','#course'],['Sharper transcriptions','The song transcriber now finds the tempo, chords, vocal melody, bass line and drums far more accurately.','#tools-isolate'],['Accessibility settings','Larger text, high contrast, reduced motion and an easy-to-read font, in Settings. Plus full keyboard and screen reader support.','settings'],['Automatic updates','The desktop app checks for a new version every time it opens and updates itself.','settings'],['Song transcriber','Add a song, isolate the vocals, guitar, bass or drums, get tab and play along.','#tools-isolate'],['Voice studio','A daily vocal workout in your own range, with pitch, vibrato and breath feedback.','#voice'],['Tone & gear','How 207 players get their sound, with EQ, settings and a tone match.','#tone'],['Lesson plans from your heroes','Pick up to five musicians and learn through their careers. Look up anyone.','#plan-new'],['Jam online','Record every player, reconnect on its own, and keep the room going if the host leaves.','#tools-online'],['Back up everything','Save all your progress to a file from Settings, and restore it on another device.','settings']];
 function whatsNewHTML(){return`<div class="wnov" role="dialog" aria-modal="true" aria-labelledby="wnt"><div class="wnbox panel"><span class="eyebrow">What's new</span><h2 id="wnt">New in Theory Club</h2><ul class="wnlist">${WN_ITEMS.map(([t,d,h])=>`<li><a href="${h==='settings'?'#home':h}" data-wn="${h}"><b>${esc(t)}</b><span class="hint">${esc(d)}</span></a></li>`).join('')}</ul><div class="row"><button class="btn primary" id="wnok">Got it</button></div></div></div>`}
 function showWhatsNew(){if(document.querySelector('.wnov'))return;document.body.insertAdjacentHTML('beforeend',whatsNewHTML());const ov=document.querySelector('.wnov');const close=()=>{store.set('wnSeen',WN_VER);ov.remove()};
  ov.querySelector('#wnok').onclick=close;ov.onclick=e=>{if(e.target===ov)close()};ov.querySelectorAll('[data-wn]').forEach(a=>a.onclick=e=>{close();if(a.dataset.wn==='settings'){e.preventDefault();try{openSettings(false)}catch(x){}}});document.addEventListener('keydown',function k(e){if(e.key==='Escape'){close();document.removeEventListener('keydown',k)}});ov.querySelector('#wnok').focus()}
@@ -9220,7 +9119,7 @@ function tidyHome(){const g=main.querySelector('.hgrid');if(!g||g.dataset.tidy)r
  const d=document.createElement('details');d.className='hmore';d.innerHTML='<summary>More things to do</summary><div class="hgrid"></div>';const mg=d.querySelector('.hgrid');rest.forEach(c=>mg.appendChild(c));
  const extra=[['#tools-isolate','Tools','Song transcriber','Isolate a part of a song, get tab and play along.'],['#tone','Tone & gear','Get their sound','Gear, settings and EQ for 207 players.']];extra.forEach(([h,e,t,s])=>{if(!mg.querySelector(`[href="${h}"]`))mg.insertAdjacentHTML('beforeend',`<a class="hcard" href="${h}"><span class="eyebrow">${e}</span><b>${t}</b><span class="hint">${s}</span></a>`)});
  try{if(store.get('hmoreOpen',false))d.open=true}catch(e){}d.addEventListener('toggle',()=>store.set('hmoreOpen',d.open));g.after(d);const wo=main.querySelector('#wnopen');if(wo)wo.onclick=showWhatsNew}
-{const _vh=viewHome;viewHome=function(){_vh();try{tidyHome()}catch(e){}try{if(store.get('welcomed',false)&&store.get('wnSeen','')!==WN_VER&&!document.querySelector('#onb'))setTimeout(()=>{if(location.hash===''||location.hash==='#home')showWhatsNew()},700)}catch(e){}}}
+
 Object.assign(window,{showWhatsNew,tidyHome,joRejoin,joState:()=>({s:JO.status,host:JO.host,code:JO.code,n:(JO.roster||[]).length,names:(JO.roster||[]).map(r=>r.name).join(','),err:JO.err}),joTestLost:()=>{JO.err='Lost the connection to the host.';joLeave(true)}});
 
 /* ================= v46: automatic updates in the desktop app ================= */
@@ -9299,7 +9198,7 @@ function a11yNames(){document.querySelectorAll('#main select:not([aria-label]):n
 /* keep the heading outline in order for screen readers (a section heading never skips a level) */
 let _hoT=0;function a11yHeadings(){const hs=[...document.querySelectorAll('#main h1,#main h2,#main h3,#main h4,#main h5,#main h6')];let prev=0;hs.forEach(h=>{const lv=+h.tagName[1];h.removeAttribute('aria-level');const want=prev&&lv>prev+1?prev+1:!prev&&lv>2?lv:lv;if(want!==lv)h.setAttribute('aria-level',want);prev=want})}
 new MutationObserver(()=>{clearTimeout(_hoT);_hoT=setTimeout(()=>{a11yHeadings();a11yNames()},80)}).observe(document.getElementById('main'),{childList:true,subtree:true});
-{const _vh=viewHome;viewHome=function(){_vh.apply(this,arguments);document.querySelectorAll('.badge2:not(.on)').forEach(b=>b.classList.add('locked'))}}
+
 applyA11y();a11yChrome();a11yRoute();
 Object.assign(window,{applyA11y,a11y,announce,tsReadText});
 
@@ -9352,12 +9251,7 @@ function viewCourseStage(n){const d=cData(),S=COURSE.stages[n-1],X=d.stages[n],s
  main.querySelectorAll('[data-cg]').forEach(c=>c.onchange=()=>{const s2=cState();s2.goals=s2.goals||{};s2.done=s2.done||{};if(s2.done[n]&&!c.checked){delete s2.done[n];X.goals.forEach((_,i)=>{s2.goals[n+'.'+i]=true})}s2.goals[n+'.'+c.dataset.cg]=c.checked;if(!s2.started)s2.started=todayKey();cSave(s2);const y=window.scrollY;const id=c.dataset.cg;render();window.scrollTo(0,y);const again=main.querySelector(`[data-cg="${id}"]`);if(again)again.focus()})};
  render()}
 /* way in from Home and the Learn page */
-function courseCardHTML(){const st=cState(),cur=cCurrent(st),d=cData();if(cur>8)return`<a class="hcard crshome" href="#course"><span class="eyebrow">Your course</span><b>All 8 stages done</b><span class="hint">You finished the ${esc(d.name)} course. Brilliant.</span></a>`;
- const S=COURSE.stages[cur-1],X=d.stages[cur];const t=cTicked(cur,st),all=X.goals.length;const next=X.goals.find((_,i)=>!(st.goals&&st.goals[cur+'.'+i]));
- return`<a class="hcard crshome" href="#course-${cur}"><span class="eyebrow">Your course · Stage ${cur} of 8</span><b>${esc(S.title)}</b><span class="hint">${next?'Next: '+esc(next):esc(X.focus)}</span><i class="hbar"><i style="width:${Math.round(100*t/all)}%"></i></i></a>`}
-{const _vh=viewHome;viewHome=function(){_vh.apply(this,arguments);try{const st=cState();const started=st.started||Object.keys(st.goals||{}).length||Object.keys(st.done||{}).length;const g=main.querySelector('.hgrid');if(!g)return;
- if(started){g.insertAdjacentHTML('afterbegin',courseCardHTML());const cards=[...g.querySelectorAll(':scope > .hcard')];const more=main.querySelector('.hmore .hgrid');if(cards.length>3&&more)more.prepend(cards[cards.length-1])}
- else{const more=main.querySelector('.hmore .hgrid');(more||g).insertAdjacentHTML('afterbegin',`<a class="hcard crshome" href="#course"><span class="eyebrow">New · Your course</span><b>Beginner to college level</b><span class="hint">A realistic, step-by-step plan for ${esc(cData().name)}, with goals and a daily routine.</span></a>`)}}catch(e){}}}
+
 {const _vl=viewLearn;viewLearn=function(){_vl.apply(this,arguments);try{const nav=main.querySelector('.lnav');if(nav&&!nav.querySelector('.lcourse'))nav.insertAdjacentHTML('afterbegin',`<a href="#course" class="lcourse"><b>Your full course</b><span class="hint">Beginner to college, stage by stage</span></a>`)}catch(e){}}}
 {const _r=route;route=function(){const h=location.hash.slice(1);if(h==='course'||h.startsWith('course-')){try{stopSeq();stopLoop();stopDemo()}catch(e){}renderChrome('learn');viewCourse(h.slice(7));return}return _r.apply(this,arguments)}}
 Object.assign(window,{viewCourse,cState,cCurrent,COURSE});
@@ -9425,11 +9319,11 @@ Object.assign(window,{aiStatus,aiUse,tsFixPanel,tsFixHTML});
 
 /* ================= v49: one learning path, grouped tools, practice tracking, saving parts, play-along scoring ================= */
 /* ---- 1. the course, topic quizzes and song plans are one section: Course ---- */
-NAV.splice(NAV.findIndex(n=>n[0]==='journey'),1,['course','Course','journey']);
-NAV_SUB.course=[['course','Stages'],['journey','Topic quizzes'],['plan','Song plan']];
-NAV_SUB.progress=NAV_SUB.progress.filter(([k])=>k!=='plan');
-{const _ns=navSection;navSection=function(h){h=h||'home';if(h==='course'||h.startsWith('course-')||h==='journey'||h.startsWith('jq-')||h==='plan'||h==='plan-new'||h==='roads')return'course';return _ns(h)}}
-{const _rc=renderChrome;renderChrome=function(h){_rc(h==='journey'||h==='learn-course'?'course':h);const sec=navSection(h==='journey'?'course':h);if(sec==='course')document.querySelectorAll('#tabbar [data-tb]').forEach(a=>{if(a.dataset.tb==='learn')a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')})}}
+
+
+
+
+
 /* topic quizzes for each stage: Beginner topics in stages 1-2, Intermediate in 3-4, Experienced in 5 */
 function cQuizUnits(n){if(n>5)return null;let U;try{U=jUnits()}catch(e){return null}const lv=n<=2?0:n<=4?1:2;const all=U[lv]||[];if(lv===2)return{lv,list:all};const h=Math.ceil(all.length/2);return{lv,list:n%2?all.slice(0,h):all.slice(h)}}
 function cQuizHTML(n){const Q=cQuizUnits(n);if(!Q||!Q.list.length)return n>5?`<section class="panel crsq"><h2>Checkpoints</h2><p class="hint">The topic quizzes end at stage 5. From here, the milestone above is your test: play it for a teacher or record it and listen back honestly.</p><a class="btn small" href="#journey">Retake topic quizzes</a></section>`:'';
@@ -9448,7 +9342,6 @@ function cHoursHTML(n){const st=cState();const s=cSecs(n,st);const H=COURSE.stag
  return`<section class="panel crshrs"><h2>Practice time</h2><p class="hint"><b>${cHrs(s)}</b> of about ${H.toLocaleString()} hours logged in this stage. Time in Theory Club counts by itself; add practice you did away from it below, or use the practice timer at the top of the page.</p><i class="hbar" aria-hidden="true"><i style="width:${pct}%"></i></i>
   <div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center"><label class="popt">Add <select id="clogm">${[10,15,20,30,45,60,90,120].map(m=>`<option value="${m}" ${m===30?'selected':''}>${m<60?m+' min':m/60+' hour'+(m>60?'s':'')}</option>`).join('')}</select></label><button class="btn small" id="clog">Add practice</button><button class="btn small" id="ctimer">${PT.on?'Practice timer is running':'Start the practice timer'}</button></div></section>`}
 function ptFmt(s){s=Math.floor(s);const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return(h?h+':'+String(m).padStart(2,'0'):m)+':'+String(x).padStart(2,'0')}
-function ptElapsed(){return PT.acc+(PT.on&&!PT.listen?(Date.now()-PT.t0)/1000:0)}
 function ptTick(){/* every second: count it (or, when listening, only if it heard you), save every 15 seconds */
  if(!PT.on)return;let add=0;if(PT.listen){if(PT.an){PT.an.getFloatTimeDomainData(PT.buf);let r=0;for(let i=0;i<PT.buf.length;i++)r+=PT.buf[i]*PT.buf[i];r=Math.sqrt(r/PT.buf.length);if(r>.012)PT.heard=Date.now()}if(Date.now()-PT.heard<4000)add=1;PT.acc+=add}else{const now=Date.now();PT.acc+=(now-PT.t0)/1000;PT.t0=now}
  PT.unsaved=(PT.unsaved||0)+(PT.listen?add:1);if(PT.unsaved>=15){logPractice(PT.unsaved,true);PT.unsaved=0}ptPaint()}
@@ -9479,9 +9372,7 @@ ptMount();window.addEventListener('beforeunload',()=>{if(PT.on&&PT.unsaved>0){tr
 {const _vj=viewJourney;viewJourney=function(){_vj.apply(this,arguments);try{const e=main.querySelector('.pagehead .eyebrow'),h=main.querySelector('.pagehead h1');if(e)e.textContent='Your course · Topic quizzes · '+(INST_NAME[INST_RAW()]||'');if(h)h.textContent='Topic quizzes';const l=main.querySelector('.pagehead .lede');if(l&&!l.dataset.v49){l.dataset.v49=1;l.insertAdjacentHTML('beforeend',' They are also the checkpoints in your course stages.')}}catch(e){}}}
 /* ---- 3. Tools, grouped ---- */
 const TOOL_GROUPS=[['Play along',['jam','online','isolate','slow','transcribe']],['Train',['read','findnote']],['Utilities',['metronome','tuner','finder']]];
-viewToolsHub=function(){const T=toolsFor();const used=new Set();const card=([k,t])=>`<a class="hcard toolcard" href="#tools-${k}"><span class="ic">${SBI['tool_'+k]||''}</span><b>${esc(t)}</b><span class="hint">${esc(TOOL_DESC[k]||'')}</span></a>`;
- const groups=TOOL_GROUPS.map(([g,ks])=>{const items=ks.map(k=>T.find(x=>x[0]===k)).filter(Boolean);items.forEach(x=>used.add(x[0]));return[g,items]});const rest=T.filter(x=>!used.has(x[0]));if(rest.length)groups[2][1].push(...rest);
- main.innerHTML=`<div class="pagehead"><div class="stack" style="gap:6px"><span class="eyebrow">Tools</span><h1>Tools</h1></div></div>${groups.filter(g=>g[1].length).map(([g,items])=>`<section class="toolgrp" aria-labelledby="tg-${g.replace(/\W/g,'')}"><h2 id="tg-${g.replace(/\W/g,'')}" class="toolgh">${g}</h2><div class="toolgrid">${items.map(card).join('')}</div></section>`).join('')}`};
+
 /* ---- 4. save the separated part, and the song without it ---- */
 async function tsSaveAudio(which){const u=TS.urls&&TS.urls[which];if(!u)return;const b=await (await fetch(u)).blob();const nm=((TS_PARTS.find(p=>p[0]===TS.res.part)||[])[1]||TS.res.part).toLowerCase().replace(/\W+/g,'-');await saveFile(slug(TS.title||'song')+'-'+(which==='part'?nm:'without-'+nm)+'.wav',b)}
 function tsAudioBtns(){const t=document.getElementById('tstxt');if(!t||document.getElementById('tswavp')||!TS.urls||!TS.urls.part||!TS.L)return;const nm=((TS_PARTS.find(p=>p[0]===TS.res.part)||[])[1]||'').toLowerCase();
@@ -9565,7 +9456,7 @@ function quickTools(){const acts=document.querySelector('.hdr-actions');if(!acts
 function viewPlay(){const T=toolsFor().filter(([k])=>ready('tools-'+k));const card=([k,t])=>`<a class="hcard toolcard" href="#tools-${k}"><span class="ic">${SBI['tool_'+k]||''}</span><b>${esc(t)}</b><span class="hint">${esc(TOOL_DESC[k]||'')}</span>${newTag('tools-'+k)}</a>`;
  const groups=[['Songs',[`<a class="hcard toolcard" href="#songs"><span class="ic">${SBI.songs||''}</span><b>Songs</b><span class="hint">Songs to learn at your level, with tab and play-along</span></a>`]],...TOOL_GROUPS.map(([g,ks])=>[g,ks.map(k=>T.find(x=>x[0]===k)).filter(Boolean).map(card)])];
  main.innerHTML=`<div class="pagehead"><div class="stack" style="gap:6px"><span class="eyebrow">Play</span><h1>Play</h1><p class="lede">Songs, backing bands and tools for playing along.</p></div></div>${groups.filter(g=>g[1].length).map(([g,items])=>`<section class="toolgrp" aria-labelledby="pg-${g.replace(/\W/g,'')}"><h2 id="pg-${g.replace(/\W/g,'')}" class="toolgh">${g}</h2><div class="toolgrid">${items.join('')}</div></section>`).join('')}${showAll()?'':`<p class="hint">More tools appear as you move through your course. To see everything now, turn on “Show everything” in Settings.</p>`}`}
-viewToolsHub=viewPlay;
+
 
 /* ---- today's practice, built from your course stage ---- */
 function dayMins(){const p=cPace()[0];return store.get('todayMins',{relaxed:25,steady:30,serious:50,fulltime:60}[p]||30)}
@@ -9598,7 +9489,7 @@ function viewToday(){unlockCheck();const n=stageNow(),S=COURSE.stages[n-1],X=cDa
  bindPills(main,(g,v)=>{if(g==='tmins'){store.set('todayMins',+v);viewToday()}});
  main.querySelector('#tgo').onclick=()=>{if(SESSION){location.hash=SESSION.blocks[SESSION.i].href;return}sessStart(blocks)}
  try{if(store.get('welcomed',false)&&store.get('wnSeen','')!==WN_VER&&!document.querySelector('#onb'))setTimeout(()=>{if(location.hash===''||location.hash==='#home')showWhatsNew()},700)}catch(e){}}
-viewHome=viewToday;
+
 
 /* ---- a gentler course page: just where you are; the whole map is one tap away ---- */
 {const _vc=viewCourse;viewCourse=function(arg){if(arg==='all'){_vc('');const h=main.querySelector('.pagehead h1');if(h)h.insertAdjacentHTML('beforebegin','<nav class="crumbs" aria-label="Breadcrumb"><a href="#course">Your course</a> › All stages</nav>');if(stageNow()<UNLOCK.roads&&!showAll()){const rb=main.querySelector('.jroadbar');if(rb)rb.remove()}return}
@@ -9619,7 +9510,7 @@ viewHome=viewToday;
 /* ---- the three-question start ---- */
 const START_LEVEL=[['new','I\'m brand new','Never played, or only a little.',1,0],['some','I know a few basics','A few chords, beats or simple tunes.',2,0],['songs','I play songs comfortably','I can get through whole songs.',3,1],['adv','I\'m advanced','Years of playing, around Grade 6 or more.',5,2]];
 const START_TIME=[['relaxed','About 20 minutes','Most days'],['steady','About 50 minutes','Most days'],['serious','1 to 2 hours','Every day'],['fulltime','It\'s my main thing','Like a full-time student']];
-openOnboarding=function(){const p=PROFILE()||{};const st={inst:(p.insts&&p.insts[0])||null,lvl:null,time:null};let step=0;
+function openOnboarding(){const p=PROFILE()||{};const st={inst:(p.insts&&p.insts[0])||null,lvl:null,time:null};let step=0;
  let ov=document.getElementById('onb');if(!ov){ov=document.createElement('div');ov.id='onb';ov.className='onb';ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');ov.setAttribute('aria-labelledby','onbt');document.body.appendChild(ov)}
  const render=()=>{let body='';
   if(step===0)body=`<h2 id="onbt">What do you want to learn?</h2><p class="lede">Pick one to start. You can add more later in Settings.</p><div class="onbgrid">${['guitar','bass','piano','drums','voice','ableton','logic','midi'].map(i=>`<button class="onbcard" data-i="${i}" aria-pressed="${st.inst===i}"><b>${INST_NAME[i]}</b><span>${INST_DESC[i]}</span></button>`).join('')}</div>`;
@@ -9634,7 +9525,7 @@ openOnboarding=function(){const p=PROFILE()||{};const st={inst:(p.insts&&p.insts
   store.set('coursePace',st.time);store.set('todayMins',{relaxed:25,steady:30,serious:50,fulltime:60}[st.time]);
   const all=store.get('course',{})||{};const cs=all[st.inst]||{goals:{},done:{}};cs.done=cs.done||{};for(let q=1;q<stage;q++)cs.done[q]=true;cs.started=cs.started||todayKey();all[st.inst]=cs;store.set('course',all);store.set('unlockAt',stage);store.set('unlockFrom',stage);
   ov.remove();syncHeader();try{prewarm(st.inst==='drums'?'guitar':st.inst==='piano'?'piano':st.inst)}catch(e){}location.hash='#home';route();announce('All set. Here is today\'s practice.')};
- render()};
+ render()}
 
 /* ---- Settings: show everything ---- */
 new MutationObserver(()=>{const b=document.getElementById('setbody');if(!b||!b.firstChild||document.getElementById('setall'))return;b.insertAdjacentHTML('beforeend',`<div class="pickrow"><span class="eyebrow">Features</span><label class="row" style="gap:8px;align-items:flex-start;flex-wrap:nowrap"><input type="checkbox" id="setall" ${showAll()?'checked':''}><span>Show everything <span class="hint">(otherwise some tools appear as your course reaches them)</span></span></label></div>`);document.getElementById('setall').onchange=e=>{store.set('showAll',e.target.checked);route()}}).observe(document.body,{childList:true,subtree:true});
@@ -9666,7 +9557,7 @@ function weakSpots(){const out=[];try{const S=jStore();const n=stageNow();const 
 {const _vt=viewToday;viewToday=function(){srsSyncCourse();_vt.apply(this,arguments);try{const pills=main.querySelector('.todayhead .pills');if(pills&&!pills.querySelector('[data-v="5"]')){pills.insertAdjacentHTML('afterbegin',`<button class="pill" data-v="5" aria-pressed="${dayMins()===5}">5 min</button>`);pills.querySelector('[data-v="5"]').onclick=()=>{store.set('todayMins',5);viewToday()}}
   if(dayMins()===5){const h=main.querySelector('.today h2');if(h&&!SESSION)h.textContent='5 minutes';const p=main.querySelector('.today>.hint');if(p)p.textContent='A busy day? Five minutes still counts, and keeps your streak going.'}
   main.querySelectorAll('.todaylist li').forEach((li,i)=>{});const J=(store.get('journal',[])||[])[0];if(J&&J.note){main.querySelector('.today').insertAdjacentHTML('beforeend',`<p class="hint todaynote">Last time you wrote: “${esc(J.note.slice(0,160))}”</p>`)}}catch(e){}}}
-viewHome=viewToday;
+
 /* ---- the end of a session: a summary and a note for next time ---- */
 function sessSummary(mins,blocks){if(document.getElementById('sumov'))return;const streak=playStreak();const n=stageNow();const X=cData().stages[n];const st=cState();const next=X.goals.find((_,i)=>!(st.goals&&st.goals[n+'.'+i]));
  const ov=document.createElement('div');ov.id='sumov';ov.className='wnov';ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');ov.setAttribute('aria-labelledby','sumt');
@@ -9706,17 +9597,17 @@ const CDEMOS={
 function demoFor(n){const d=CDEMOS[INST_RAW()]||CDEMOS[INST()];return d&&d[n]?d[n]:null}
 function demoNotes(D){if(D.kind==='frets')return D.seq.map(([s,f])=>D.str[s]+f);if(D.kind==='keys'&&!D.chords)return D.seq.map(x=>x[0]);return null}
 function demoSVG(D){const W=640;
- if(D.kind==='chords'||D.kind==='strum'||D.kind==='frets'){const S=D.kind==='frets'?D.str.length:6;const lo=D.kind==='frets'?Math.max(0,Math.min(...D.seq.map(x=>x[1]))-1):0;const nf=5;const x0=60,fw=(W-x0-20)/nf,y0=20,sh=24;const H=y0*2+sh*(S-1)+20;
+ if(D.kind==='chords'||D.kind==='strum'||D.kind==='frets'){const S=D.kind==='frets'?D.str.length:6;const lo=D.kind==='frets'?Math.max(0,Math.min(...D.seq.map(x=>x[1]))-1):0;const nf=D.kind==='frets'?Math.max(5,Math.max(...D.seq.map(x=>x[1]))-lo):5;const x0=60,fw=(W-x0-20)/nf,y0=20,sh=24;const H=y0*2+sh*(S-1)+20;
   let g=`<svg viewBox="0 0 ${W} ${H}" class="demosvg" role="img" aria-label="${esc(D.t)}"><g class="fb">`;for(let s=0;s<S;s++)g+=`<line x1="${x0}" x2="${W-20}" y1="${y0+sh*(S-1-s)}" y2="${y0+sh*(S-1-s)}"/>`;for(let f=0;f<=nf;f++)g+=`<line x1="${x0+f*fw}" x2="${x0+f*fw}" y1="${y0}" y2="${y0+sh*(S-1)}" class="${f===0&&lo===0?'nut':''}"/>`;
   for(let f=1;f<=nf;f++)g+=`<text x="${x0+(f-.5)*fw}" y="${H-4}" class="fnum">${lo+f}</text>`;g+='</g><g class="dots"></g></svg>';return{svg:g,lo,x0,fw,y0,sh,S}}
- if(D.kind==='keys'){const lo=60,hi=77;const wk=[];for(let m=lo;m<=hi;m++)if(![1,3,6,8,10].includes(m%12))wk.push(m);const kw=(W-20)/wk.length;let g=`<svg viewBox="0 0 ${W} 130" class="demosvg" role="img" aria-label="${esc(D.t)}">`;
+ if(D.kind==='keys'){const all=D.seq.flatMap(x=>Array.isArray(x[0])?x[0]:[x[0]]);const lo=Math.min(60,Math.min(...all)-Math.min(...all)%12),hi=Math.max(lo+17,Math.max(...all)+(11-Math.max(...all)%12));const wk=[];for(let m=lo;m<=hi;m++)if(![1,3,6,8,10].includes(m%12))wk.push(m);const kw=(W-20)/wk.length;let g=`<svg viewBox="0 0 ${W} 130" class="demosvg" role="img" aria-label="${esc(D.t)}">`;
   wk.forEach((m,i)=>g+=`<rect class="wk" data-m="${m}" x="${10+i*kw}" y="10" width="${kw-2}" height="100" rx="4"/>`);wk.forEach((m,i)=>{if(m<hi&&![4,11].includes(m%12))g+=`<rect class="bk" data-m="${m+1}" x="${10+(i+1)*kw-kw*.3}" y="10" width="${kw*.58}" height="62" rx="3"/>`});return{svg:g+'<g class="dots"></g></svg>',kw,wk}}
  if(D.kind==='drums'){const rows=Object.keys(D.rows);const cw=(W-90)/D.steps,rh=34;let g=`<svg viewBox="0 0 ${W} ${rows.length*rh+44}" class="demosvg" role="img" aria-label="${esc(D.t)}">`;
   rows.forEach((r,ri)=>{g+=`<text x="8" y="${ri*rh+26}" class="rlab">${{hat:'Hi-hat',snare:'Snare',kick:'Kick'}[r]}</text>`;for(let i=0;i<D.steps;i++)g+=`<rect class="cell ${D.rows[r][i]==='x'?'on':''}" data-c="${i}" x="${80+i*cw}" y="${ri*rh+8}" width="${cw-4}" height="${rh-8}" rx="5"/>`});
   for(let i=0;i<D.steps;i++)if(D.hands[i]&&D.hands[i]!=='.')g+=`<text class="hand" data-c="${i}" x="${80+i*cw+cw/2-2}" y="${rows.length*rh+30}">${D.hands[i]}</text>`;return{svg:g+'</svg>'}}
  if(D.kind==='breath')return{svg:`<svg viewBox="0 0 ${W} 200" class="demosvg" role="img" aria-label="${esc(D.t)}"><circle class="breath" cx="${W/2}" cy="100" r="30"/><text class="bcount" x="${W/2}" y="106"></text></svg>`};
  return{svg:''}}
-function demoPanel(n){const D=demoFor(n);if(!D)return'';const canCheck=!IN_CLAUDE()&&D.kind!=='breath'&&navigator.mediaDevices;
+function demoPanel(n){const D=demoFor(n);if(!D)return'';const canCheck=!IN_CLAUDE()&&D.kind!=='breath'&&!D.daw&&navigator.mediaDevices;
  return`<section class="panel demo" data-demo="${n}"><h2>Watch, then try it</h2><p class="hint">${esc(D.t)}. ${D.kind==='breath'?'Follow the circle.':'Watch it in time, then play along.'}</p><div class="demobox"></div>
   <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><button class="btn primary" data-dplay>${ICON.play} Play the demo</button><label class="popt">Speed <select data-dbpm>${[.6,.8,1,1.2].map(r=>`<option value="${r}" ${r===1?'selected':''}>${Math.round(D.bpm*r)} BPM</option>`).join('')}</select></label>${canCheck?'<button class="btn" data-dcheck>Check me</button>':''}</div><div class="democheck" aria-live="polite"></div></section>`}
 const DM={raf:0,stop:null};
@@ -9782,13 +9673,14 @@ const PA=[
 /* public-domain tunes, with the melody: [note, beats] (60 = middle C) and chords [name, beats] */
 const PDTUNES=[
  ['Ode to Joy','Beethoven (public domain)',100,[[64,1],[64,1],[65,1],[67,1],[67,1],[65,1],[64,1],[62,1],[60,1],[60,1],[62,1],[64,1],[64,1.5],[62,.5],[62,2],[64,1],[64,1],[65,1],[67,1],[67,1],[65,1],[64,1],[62,1],[60,1],[60,1],[62,1],[64,1],[62,1.5],[60,.5],[60,2]],[['C',4],['G',4],['C',4],['G',2],['C',2],['C',4],['G',4],['C',4],['G',2],['C',2]]],
- ['When the Saints Go Marching In','Traditional',110,[[60,1],[64,1],[65,1],[67,5],[60,1],[64,1],[65,1],[67,5],[60,1],[64,1],[65,1],[67,2],[64,2],[60,2],[64,2],[62,6]],[['C',16],['G',8]]],
+ ['When the Saints Go Marching In','Traditional',110,[[60,1],[64,1],[65,1],[67,5],[60,1],[64,1],[65,1],[67,5],[60,1],[64,1],[65,1],[67,2],[64,2],[60,2],[64,2],[62,6]],[['C',8],['C',8],['C',8],['G',9]]],
  ['Twinkle Twinkle Little Star','Traditional',100,[[60,1],[60,1],[67,1],[67,1],[69,1],[69,1],[67,2],[65,1],[65,1],[64,1],[64,1],[62,1],[62,1],[60,2]],[['C',4],['F',2],['C',2],['F',2],['C',2],['G',2],['C',2]]],
  ['Frère Jacques','Traditional',110,[[60,1],[62,1],[64,1],[60,1],[60,1],[62,1],[64,1],[60,1],[64,1],[65,1],[67,2],[64,1],[65,1],[67,2]],[['C',16]]],
  ['Mary Had a Little Lamb','Traditional',110,[[64,1],[62,1],[60,1],[62,1],[64,1],[64,1],[64,2],[62,1],[62,1],[62,2],[64,1],[67,1],[67,2]],[['C',8],['G',4],['C',4]]],
  ['Amazing Grace','Traditional',80,[[55,1],[60,2],[64,.5],[60,.5],[64,2],[62,1],[60,2],[57,1],[55,2],[55,1],[60,2],[64,.5],[60,.5],[64,2],[62,1],[67,6]],[['C',3],['C',3],['F',3],['C',3],['C',3],['C',3],['G',6]]]];
-const PA_Q={'':'maj',m:'min','7':'7',maj7:'maj7',m7:'m7'};
+const PA_Q={'':'maj',m:'min','7':'7',maj7:'maj7',m7:'m7','5':'5',sus4:'sus4','7sus4':'sus4',m7b5:'m7'};
 function paChord(nm){const m=nm.match(/^([A-G][#b]?)(.*)$/);const R=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];const fl={Db:'C#',Eb:'D#',Gb:'F#',Ab:'G#',Bb:'A#'};const root=R.indexOf(fl[m[1]]||m[1]);const type=PA_Q[m[2]]||'maj';return{root,type,name:R[root]+(type==='maj'?'':type==='min'?'m':type)}}
+
 function paOpen(kind,i){const S=kind==='pd'?PDTUNES[i]:PA[i];const bpm=kind==='pd'?S[2]:S[3];const bt=60/bpm;const prog=kind==='pd'?S[4]:S[4];const beatsPer=prog.reduce((a,x)=>a+x[1],0);const loops=kind==='pd'?1:Math.max(2,Math.ceil(32/beatsPer));const total=beatsPer*loops;const lead=1;
  const beats=[];for(let b=0;b<=total+4;b++)beats.push(+(lead+b*bt).toFixed(3));const chords=[];let t=0;for(let l=0;l<loops;l++)prog.forEach(([nm,b])=>{const c=paChord(nm);chords.push(Object.assign({t:+(lead+t*bt).toFixed(3),d:+(b*bt).toFixed(3)},c));t+=b});
  const notes=[];if(kind==='pd'){let u=0;S[3].forEach(([m,b])=>{notes.push({t:+(lead+u*bt).toFixed(3),d:+(b*bt*.95).toFixed(3),m,v:90});u+=b})}
@@ -9828,6 +9720,91 @@ async function droidUpdate(){if(!DROID)return;try{const cur=await natCall('app_v
  b.querySelector('#dupd').onclick=async()=>{try{await window.__TAURI__.opener.openUrl(apk.browser_download_url)}catch(e){location.href=apk.browser_download_url}};b.querySelector('#dlater').onclick=()=>b.remove()}catch(e){}}
 if(DROID){setTimeout(droidUpdate,4000);setTimeout(remSchedule,3000)}
 Object.assign(window,{weakSpots,CDEMOS,demoFor,PA,PDTUNES,paOpen,remTick,youHTML,droidUpdate});
+
+/* ================= v52: more play-alongs and tunes, demos for every stage and for the DAWs ================= */
+Object.assign(DEMO_CH,{F:[1,3,3,2,1,1],Bm:[null,2,4,4,3,2],Cmaj7:[null,3,2,0,0,0],Dm7:[null,null,0,2,1,1],G7:[3,2,0,0,0,1],Am7:[null,0,2,0,1,0],E7:[0,2,0,1,0,0],Dm:[null,null,0,2,3,1],Fmaj7:[null,null,3,2,1,0]});
+Object.assign(DEMO_FG,{F:[1,3,4,2,1,1],Bm:[0,1,3,4,2,1],Cmaj7:[0,3,2,0,0,0],Dm7:[0,0,0,2,1,1],G7:[3,2,0,0,0,1],Am7:[0,0,2,0,1,0],E7:[0,2,0,1,0,0],Dm:[0,0,0,2,3,1],Fmaj7:[0,0,3,2,1,0]});
+/* drum hands from the pattern: R for hi-hat, L for snare (a typical right-handed kit), K for a kick on its own */
+const dHands=rows=>{const n=Object.values(rows)[0].length;let h='';for(let i=0;i<n;i++)h+=rows.hat&&rows.hat[i]==='x'?'R':rows.snare&&rows.snare[i]==='x'?'L':rows.kick&&rows.kick[i]==='x'?'K':'.';return h};
+Object.assign(CDEMOS.guitar,{
+ 4:{t:'Barre chords: F and Bm, then back to open chords',kind:'chords',seq:['F','Bm','C','G'],bpm:60},
+ 5:{t:'The G major scale, three notes on each string',kind:'frets',str:GT,seq:[[0,3,1],[0,5,2],[0,7,4],[1,3,1],[1,5,2],[1,7,4],[2,4,1],[2,5,2],[2,7,4],[3,4,1],[3,5,2],[3,7,4],[4,5,1],[4,7,3],[4,8,4]],bpm:80},
+ 6:{t:'A ii–V–I in C: Dm7, G7, Cmaj7',kind:'chords',seq:['Dm7','G7','Cmaj7','Cmaj7'],bpm:70},
+ 7:{t:'An A minor arpeggio across the strings',kind:'frets',str:GT,seq:[[0,5,1],[0,8,4],[1,7,3],[2,7,3],[3,5,1],[4,5,1],[5,5,1],[5,8,4]],bpm:76},
+ 8:{t:'The A Dorian mode',kind:'frets',str:GT,seq:[[0,5,1],[0,7,3],[0,8,4],[1,5,1],[1,7,3],[1,9,4],[2,5,1],[2,7,3]],bpm:76}});
+Object.assign(CDEMOS.bass,{
+ 4:{t:'A walking bass line in C',kind:'frets',str:BT,seq:[[1,3,2],[2,2,1],[2,5,4],[3,2,1],[0,1,1],[0,5,4],[1,3,2],[1,5,4]],bpm:90},
+ 5:{t:'The A minor pentatonic',kind:'frets',str:BT,seq:[[0,5,1],[0,8,4],[1,5,1],[1,7,3],[2,5,1],[2,7,3]],bpm:80},
+ 6:{t:'Chord tones of Cmaj7: 1, 3, 5, 7',kind:'frets',str:BT,seq:[[1,3,2],[2,2,1],[2,5,4],[3,4,3],[3,5,4]],bpm:76},
+ 7:{t:'The G major scale',kind:'frets',str:BT,seq:[[0,3,2],[0,5,4],[1,2,1],[1,3,2],[1,5,4],[2,2,1],[2,4,3],[2,5,4]],bpm:80},
+ 8:{t:'Walking through a ii–V–I in C, chord tones only',kind:'frets',str:BT,seq:[[1,5,4],[2,3,2],[3,2,1],[3,5,4],[0,3,2],[1,2,1],[1,5,4],[2,3,2],[1,3,2],[2,2,1],[2,5,4],[3,4,3]],bpm:90}});
+Object.assign(CDEMOS.piano,{
+ 4:{t:'Seventh chords for a ii–V–I in C (right hand)',kind:'keys',chords:true,seq:[[[62,65,69,72],'Dm7'],[[62,65,67,71],'G7'],[[60,64,67,71],'Cmaj7']],bpm:50},
+ 5:{t:'C major arpeggio, two octaves',kind:'keys',seq:[[60,1],[64,2],[67,3],[72,1],[76,2],[79,3],[84,5],[79,3],[76,2],[72,1],[67,3],[64,2],[60,1]],bpm:76},
+ 6:{t:'Seventh chords on each step: Cmaj7, Dm7, Em7, Fmaj7',kind:'keys',chords:true,seq:[[[60,64,67,71],'Cmaj7'],[[62,65,69,72],'Dm7'],[[64,67,71,74],'Em7'],[[65,69,72,76],'Fmaj7']],bpm:50},
+ 7:{t:'The C blues scale',kind:'keys',seq:[[60,1],[63,2],[65,3],[66,4],[67,1],[70,3],[72,4]],bpm:72},
+ 8:{t:'The chromatic scale, with standard fingering',kind:'keys',seq:[[60,1],[61,3],[62,1],[63,3],[64,1],[65,2],[66,3],[67,1],[68,3],[69,1],[70,3],[71,1],[72,2]],bpm:80}});
+{const G={4:{t:'A 16th-note hi-hat groove',rows:{hat:'xxxxxxxxxxxxxxxx',snare:'....x.......x...',kick:'x.....x.x.......'},steps:16,hands:'RLRLRLRLRLRLRLRL',bpm:80},
+ 5:{t:'The shuffle: triplets with the middle one left out',rows:{hat:'x.xx.xx.xx.x',snare:'...x.....x..',kick:'x.....x.....'},steps:12,bpm:90},
+ 6:{t:'The double paradiddle: R L R L R R, L R L R L L',rows:{snare:'xxxxxxxxxxxx'},steps:12,hands:'RLRLRRLRLRLL',bpm:70},
+ 7:{t:'A linear groove: no two drums at once',rows:{hat:'.xx..x.xxx.x..xx',snare:'....x.......x...',kick:'x..x..x...x..x..'},steps:16,bpm:84},
+ 8:{t:'A half-time groove',rows:{hat:'x.x.x.x.x.x.x.x.',snare:'........x.......',kick:'x......x..x.....'},steps:16,bpm:76}};
+ for(const n in G){const d=G[n];CDEMOS.drums[n]=Object.assign({kind:'drums',hands:d.hands||dHands(d.rows)},d)}}
+Object.assign(CDEMOS.voice,{
+ 4:{t:'An arpeggio: do mi so do, and back',kind:'keys',sing:true,seq:[[60,'do'],[64,'mi'],[67,'so'],[72,'do'],[67,'so'],[64,'mi'],[60,'do']],bpm:66},
+ 5:{t:'The natural minor scale: la to la',kind:'keys',sing:true,seq:[[57,'la'],[59,'ti'],[60,'do'],[62,'re'],[64,'mi'],[65,'fa'],[67,'so'],[69,'la']],bpm:60},
+ 6:{t:'Leaps of a fourth and a fifth',kind:'keys',sing:true,seq:[[60,'do'],[65,'fa'],[60,'do'],[67,'so'],[62,'re'],[67,'so'],[62,'re'],[69,'la']],bpm:60},
+ 7:{t:'The chromatic scale',kind:'keys',sing:true,seq:[[60,'do'],[61,'di'],[62,'re'],[63,'ri'],[64,'mi'],[65,'fa'],[66,'fi'],[67,'so'],[68,'si'],[69,'la'],[70,'li'],[71,'ti'],[72,'do']],bpm:60},
+ 8:{t:'Harmony: a third above C D E D C',kind:'keys',sing:true,seq:[[64,'mi'],[65,'fa'],[67,'so'],[65,'fa'],[64,'mi']],bpm:56}});
+/* the DAW courses: watch the pattern you'll program */
+{const D={1:{t:'Program a basic beat',kind:'drums',bpm:90,steps:16,rows:{hat:'x.x.x.x.x.x.x.x.',snare:'....x.......x...',kick:'x.......x.x.....'}},
+ 2:{t:'A four-chord progression in the piano roll: C, Am, F, G',kind:'keys',chords:true,seq:[[[60,64,67],'C'],[[57,60,64],'Am'],[[53,57,60],'F'],[[55,59,62],'G']],bpm:60},
+ 3:{t:'A bassline that follows the chords',kind:'keys',seq:[[48,'C'],[48,'C'],[45,'A'],[45,'A'],[41,'F'],[41,'F'],[43,'G'],[43,'G']],bpm:90},
+ 4:{t:'Four on the floor, with off-beat hi-hats',kind:'drums',bpm:120,steps:16,rows:{hat:'..x...x...x...x.',snare:'....x.......x...',kick:'x...x...x...x...'}},
+ 6:{t:'A syncopated bassline: notes off the beat',kind:'keys',seq:[[45,'A'],[45,'A'],[48,'C'],[45,'A'],[41,'F'],[41,'F'],[43,'G'],[43,'G']],bpm:118},
+ 7:{t:'Programming a drum fill into the next bar',kind:'drums',bpm:100,steps:16,rows:{hat:'x.x.x.x.........',snare:'....x...xxxxxxxx',kick:'x.....x.........'}},
+ 8:{t:'Spread voicings: chords that leave room in the mix',kind:'keys',chords:true,seq:[[[48,55,64,71],'Cmaj7'],[[45,52,60,67],'Am7'],[[41,48,57,64],'Fmaj7'],[[43,50,59,65],'G7']],bpm:50},
+ 5:{t:'A synth arpeggio over Am, F, C, G',kind:'keys',seq:[[57,'A'],[60,'C'],[64,'E'],[60,'C'],[53,'F'],[57,'A'],[60,'C'],[57,'A'],[48,'C'],[52,'E'],[55,'G'],[52,'E'],[55,'G'],[59,'B'],[62,'D'],[59,'B']],bpm:110}};
+ for(const n in D){D[n].daw=true;if(D[n].kind==='drums')D[n].hands=''}
+ CDEMOS.ableton=D;CDEMOS.logic=D;CDEMOS.midi=D}
+
+/* ---- more play-alongs ---- */
+PA.push(
+ ['Imagine','John Lennon','C',76,[['C',2],['Cmaj7',2],['F',4]]],
+ ['Hey Jude','The Beatles','F',74,[['F',4],['C',4],['C7',4],['F',4],['Bb',4],['F',4],['C',4],['F',4]]],
+ ['Wild Thing','The Troggs','A',112,[['A',1],['D',1],['E',1],['D',1]]],
+ ['Louie Louie','The Kingsmen','A',120,[['A',2],['D',2],['Em',2],['D',2]]],
+ ['Good Riddance (Time of Your Life)','Green Day','G',95,[['G',4],['C',4],['D',4],['G',4]]],
+ ['Wonderwall','Oasis','Em',87,[['Em7',4],['G',4],['Dsus4',4],['A7sus4',4]]],
+ ['Brown Eyed Girl','Van Morrison','G',150,[['G',4],['C',4],['G',4],['D',4]]],
+ ['Hotel California','Eagles','Bm',74,[['Bm',4],['F#',4],['A',4],['E',4],['G',4],['D',4],['Em',4],['F#',4]]],
+ ['House of the Rising Sun','Traditional','Am',120,[['Am',3],['C',3],['D',3],['F',3],['Am',3],['C',3],['E',6]]],
+ ['Johnny B. Goode','Chuck Berry','Bb',168,[['Bb',16],['Eb',8],['Bb',8],['F',4],['Eb',4],['Bb',8]]],
+ ['Smells Like Teen Spirit','Nirvana','F',117,[['F5',4],['Bb5',4],['Ab5',4],['Db5',4]]],
+ ['Every Breath You Take','The Police','G',117,[['G',8],['Em',8],['C',4],['D',4],['G',8]]],
+ ['I\'m Yours','Jason Mraz','B',76,[['B',4],['F#',4],['G#m',4],['E',4]]],
+ ['Viva la Vida','Coldplay','Ab',138,[['Db',4],['Eb',4],['Ab',4],['Fm',4]]],
+ ['Clocks','Coldplay','Eb',131,[['Eb',4],['Bbm',8],['Fm',4]]],
+ ['Royals','Lorde','D',85,[['D',8],['C',4],['G',4]]],
+ ['Wake Me Up','Avicii','Bm',124,[['Bm',4],['G',4],['D',4],['A',4]]],
+ ['Counting Stars','OneRepublic','C#m',122,[['C#m',4],['E',4],['B',4],['A',4]]],
+ ['Despacito','Luis Fonsi','Bm',89,[['Bm',4],['G',4],['D',4],['A',4]]],
+ ['Jolene (capo 4 shapes)','Dolly Parton','Am',112,[['Am',4],['C',4],['G',4],['Am',4],['G',4],['Em',4],['Am',8]]],
+ ['Island in the Sun','Weezer','Em',116,[['Em',4],['Am',4],['D',4],['G',4]]],
+ ['Ring of Fire','Johnny Cash','G',105,[['G',4],['C',2],['G',2],['D',2],['G',6]]],
+ ['Canon in D','Pachelbel (public domain)','D',60,[['D',4],['A',4],['Bm',4],['F#m',4],['G',4],['D',4],['G',4],['A',4]]],
+ ['Minor blues in A','Practice','Am',90,[['Am',16],['Dm',8],['Am',8],['E7',4],['Dm',4],['Am',4],['E7',4]]],
+ ['12-bar blues in G','Practice','G',110,[['G',16],['C',8],['G',8],['D',4],['C',4],['G',4],['D',4]]]);
+PDTUNES.push(
+ ['Happy Birthday','Traditional (public domain)',100,[[55,.75],[55,.25],[57,1],[55,1],[60,1],[59,2],[55,.75],[55,.25],[57,1],[55,1],[62,1],[60,2],[55,.75],[55,.25],[67,1],[64,1],[60,1],[59,1],[57,2],[65,.75],[65,.25],[64,1],[60,1],[62,1],[60,2]],[['C',3],['G',3],['G',3],['C',3],['C',3],['F',3],['C',2],['G',2],['C',3]]],
+ ['Jingle Bells','James Lord Pierpont (public domain)',120,[[64,1],[64,1],[64,2],[64,1],[64,1],[64,2],[64,1],[67,1],[60,1.5],[62,.5],[64,4],[65,1],[65,1],[65,1.5],[65,.5],[65,1],[64,1],[64,1],[64,.5],[64,.5],[64,1],[62,1],[62,1],[64,1],[62,2],[67,2]],[['C',8],['C',4],['C',4],['F',4],['C',4],['D7',4],['G',4]]],
+ ['Yankee Doodle','Traditional',120,[[60,1],[60,1],[62,1],[64,1],[60,1],[64,1],[62,1],[55,1],[60,1],[60,1],[62,1],[64,1],[60,2],[59,2],[60,1],[60,1],[62,1],[64,1],[65,1],[64,1],[62,1],[60,1],[59,1],[55,1],[57,1],[59,1],[60,2],[60,2]],[['C',4],['G',4],['C',4],['G',4],['C',4],['F',4],['G',4],['C',4]]],
+ ['Old MacDonald','Traditional',110,[[67,1],[67,1],[67,1],[62,1],[64,1],[64,1],[62,2],[71,1],[71,1],[69,1],[69,1],[67,4]],[['G',4],['C',2],['G',2],['G',2],['D',2],['G',4]]],
+ ['London Bridge','Traditional',110,[[67,1.5],[69,.5],[67,1],[65,1],[64,1],[65,1],[67,2],[62,1],[64,1],[65,2],[64,1],[65,1],[67,2],[67,1.5],[69,.5],[67,1],[65,1],[64,1],[65,1],[67,2],[62,2],[67,2],[64,1],[60,3]],[['C',8],['G',2],['C',2],['G',2],['C',2],['C',8],['G',4],['C',4]]],
+ ['Silent Night','Franz Gruber (public domain)',80,[[67,1.5],[69,.5],[67,1],[64,3],[67,1.5],[69,.5],[67,1],[64,3],[74,2],[74,1],[71,3],[72,2],[72,1],[67,3]],[['C',12],['G',6],['C',6]]]);
+/* Songs: search and an "easy" filter, now there are lots */
+{const _ph=paHTML;paHTML=function(){const h=_ph();return h.replace('<div class="palist">',`<div class="row pafilter" style="gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px"><input type="search" id="pasearch" placeholder="Search songs or artists" aria-label="Search play-alongs" style="flex:1;min-width:0;max-width:320px"><label class="popt"><input type="checkbox" id="paeasy"> 2 or 3 chords only</label></div><div class="palist">`)}}
+{const _vs=viewSongs;viewSongs=function(){_vs.apply(this,arguments);const q=main.querySelector('#pasearch'),e=main.querySelector('#paeasy');if(!q)return;const f=()=>{const t=q.value.trim().toLowerCase();main.querySelectorAll('[data-pa]').forEach(b=>{const S=PA[+b.dataset.pa];const nch=new Set(S[4].map(x=>x[0])).size;b.hidden=!!(t&&!(S[0]+' '+S[1]).toLowerCase().includes(t))||(e.checked&&nch>3)});main.querySelectorAll('[data-pd]').forEach(b=>{const S=PDTUNES[+b.dataset.pd];b.hidden=!!(t&&!(S[0]+' '+S[1]).toLowerCase().includes(t))})};q.oninput=f;e.onchange=f}}
 
 window.__tc={cleanIcon,manualIcon,findIcon,saveMyIcon,ICONS,buildPlan,viewMyPlan,viewPlanBuilder,techDiff,lessonPlanHTML,roadPlanHTML,ROADS,jLevels,techT,techX,VTECH,viewRoads,curRoad,setRoad,JTECH,jtQuestion,viewJTech,jMake,jUnits,JB,JG,engrave,asciiFitBar,JO,JR,joLnow,natSess,joChordAt:(...a)=>joChordAt(...a),UPD,TAB_EX,makeZip,midiFile,gtrVoice,drumVary,percHits,DKITS,drum,PLAYDB,TECH,PD,studyEx,pdEx,parseAsciiTab,scoreToEx,drumChart,topicPool,ksBuf,pianoBuf,detectPitch,audio:()=>audio(),AC:()=>AC,MASTER:()=>MASTER,tone:(...a)=>tone(...a),renderOffline:(...a)=>renderOffline(...a),itemFx:(...a)=>itemFx(...a),transformEx,chromaOf,chordMissing,packCode,unpackCode,MEDIA:()=>MEDIA,progressData,lickEx,LICKLIB,earQuestion,heardNotes,icsFor,INPUT:()=>INPUT,startTour,homeClef,noteQ,JT:()=>JT,JOURNEY:()=>JOURNEY,G:()=>G,songStepEx,TECHX:()=>TECHX,gtrOut:()=>gtrOut()};
 /* ---------- router ---------- */

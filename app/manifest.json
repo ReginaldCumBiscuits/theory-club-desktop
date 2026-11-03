@@ -1,0 +1,131 @@
+[
+ {
+  "kind": "text",
+  "text": "<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin><link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Geist:wght@400;500;600;700&display=swap\">\n<title>Theory Club</title>\n<meta name=\"claude:viewport-fit-sides\" content=\"cover\">\n"
+ },
+ {
+  "kind": "style",
+  "file": "src/styles.css"
+ },
+ {
+  "kind": "file",
+  "file": "src/body.html"
+ },
+ {
+  "kind": "script",
+  "files": [
+   "src/js/00-start.js",
+   "src/js/01-storage.js",
+   "src/js/02-rng.js",
+   "src/js/03-music-core.js",
+   "src/js/04-guitar.js",
+   "src/js/05-audio.js",
+   "src/js/06-drums.js",
+   "src/js/07-drawing.js",
+   "src/js/08-question-generators.js",
+   "src/js/09-ui.js",
+   "src/js/10-v23-songsterr-style-tab-engraving.js",
+   "src/js/11-v11.js",
+   "src/js/12-v14-12-keys-fills-genres-solos-intervals.js",
+   "src/js/13-v15-guitar-voicings-and-strums-drum-kits-and-percussion.js",
+   "src/js/14-v16-time-signatures-and-kit-choice-on-the-drum-page.js",
+   "src/js/15-v18-export-helpers.js",
+   "src/js/16-v19-interface.js",
+   "src/js/17-v20-daws-midi-and-home-recording.js",
+   "src/js/18-v21-more-lessons-for-every-instrument-and-more-theory.js",
+   "src/js/19-v32-score-engraving-tab-staff-or-both-songsterr-style.js",
+   "src/js/20-learning-journey-question-banks.js",
+   "src/js/21-learning-journey-generators.js",
+   "src/js/22-learning-journey-the-routes.js",
+   "src/js/23-learning-journey-pages.js",
+   "src/js/24-v34-simpler-navigation.js",
+   "src/js/25-v35-song-pages-that-teach-more-and-sound-like-the-style.js",
+   "src/js/26-v36-progress-that-moves-between-devices.js",
+   "src/js/27-v36-imported-tabs-transpose-capo-and-playing-along-with-your.js",
+   "src/js/28-v36-hearing-which-notes-of-a-chord-rang.js",
+   "src/js/29-v36-lick-library-any-key-with-a-band.js",
+   "src/js/30-v36-ear-training-you-answer-by-playing.js",
+   "src/js/31-v36-goals-and-reminders.js",
+   "src/js/32-v36-drum-and-piano-lessons.js",
+   "src/js/33-v36-routes-for-licks-and-ear-training.js",
+   "src/js/34-v37-a-guided-tour.js",
+   "src/js/35-v38-both-clefs-taught-before-they-re-tested.js",
+   "src/js/36-v39-bigger-question-banks.js",
+   "src/js/37-v39-more-kinds-of-question.js",
+   "src/js/38-v39-more-techniques-explained-in-more-depth.js",
+   "src/js/39-v39-technique-levels-in-the-journey.js",
+   "src/js/40-v40-sound-engine-upgrade.js",
+   "src/js/41-v40-more-techniques-deeper-lessons-and-learning-roads.js",
+   "src/js/42-v40-research-based-lesson-plans.js",
+   "src/js/43-v40-build-a-lesson-plan-from-your-icons.js",
+   "src/js/44-v40-look-up-any-musician.js",
+   "src/js/45-v41-tone-and-gear-how-each-player-gets-their-sound.js",
+   "src/js/46-v42-tone-guides-from-wikipedia-and-sharing-guides-with-frien.js",
+   "src/js/47-v43-tone-matching-presets-song-tone-auto-review-report-cards.js",
+   "src/js/48-v44-voice-studio-range-daily-workout-sustain-and-vibrato-bre.js",
+   "src/js/49-v44b-look-up-a-musician-s-songs-on-wikipedia-website-and-des.js",
+   "src/js/50-v45-v46-song-transcriber-the-background-worker-stem-separati.js",
+   "src/js/51-v45-song-transcriber-isolate-a-part-of-a-song-turn-it-into-t.js",
+   "src/js/52-v45-jam-host-handover.js",
+   "src/js/53-v45-a-tidier-home-and-what-s-new.js",
+   "src/js/54-v46-automatic-updates-in-the-desktop-app.js",
+   "src/js/55-v46-accessibility.js",
+   "src/js/56-v47-the-full-course-from-complete-beginner-to-college-level.js",
+   "src/js/57-v48-ai-stem-separation-desktop-app-and-fixing-wrong-notes.js",
+   "src/js/58-v49-one-learning-path-grouped-tools-practice-tracking-saving.js",
+   "src/js/59-v50-a-calmer-simpler-theory-club.js",
+   "src/js/60-v51-smarter-practice-demos-you-can-check-song-play-alongs-a-.js",
+   "src/js/61-v52-more-play-alongs-and-tunes-demos-for-every-stage-and-for.js",
+   "src/js/62-startup.js"
+  ]
+ },
+ {
+  "kind": "text",
+  "text": "\n"
+ },
+ {
+  "kind": "json",
+  "id": "tc-smp-piano",
+  "file": "data/tc-smp-piano.json"
+ },
+ {
+  "kind": "text",
+  "text": "\n"
+ },
+ {
+  "kind": "json",
+  "id": "tc-smp-guitar",
+  "file": "data/tc-smp-guitar.json"
+ },
+ {
+  "kind": "text",
+  "text": "\n"
+ },
+ {
+  "kind": "json",
+  "id": "tc-smp-bass",
+  "file": "data/tc-smp-bass.json"
+ },
+ {
+  "kind": "text",
+  "text": "\n"
+ },
+ {
+  "kind": "json",
+  "id": "tc-smp-drums",
+  "file": "data/tc-smp-drums.json"
+ },
+ {
+  "kind": "text",
+  "text": "\n"
+ },
+ {
+  "kind": "json",
+  "id": "tc-smp-guitarE",
+  "file": "data/tc-smp-guitarE.json"
+ },
+ {
+  "kind": "text",
+  "text": "\n\n"
+ }
+]

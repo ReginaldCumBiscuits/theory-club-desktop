@@ -1,0 +1,28 @@
+/* ================= v36: goals and reminders ================= */
+const WD=[['MO','Mon'],['TU','Tue'],['WE','Wed'],['TH','Thu'],['FR','Fri'],['SA','Sat'],['SU','Sun']];
+function weekDaysPlayed(){const L=store.get('plog',{})||{};const now=new Date();const mon=new Date(now);mon.setDate(now.getDate()-((now.getDay()+6)%7));let n=0,mins=0;for(let i=0;i<7;i++){const d=new Date(mon);d.setDate(mon.getDate()+i);const v=L[todayKey(d)]||0;mins+=v;if(v>=60)n++}return{days:n,mins:Math.round(mins/60)}}
+function remindCfg(){return Object.assign({days:[0,1,2,3,4],time:'19:00',notify:false},store.get('remind',{})||{})}
+function goalsHTML(){const g=store.get('goalDays',4),w=weekDaysPlayed(),R=remindCfg(),gm=store.get('goal',120);const canN='Notification' in window&&!IN_CLAUDE();
+ return`<section class="panel goals" id="goals"><h3>Goals and reminders</h3>
+  <div class="ggrid"><div class="gcell"><span class="eyebrow">Days a week</span>${pillsHTML('gd',[2,3,4,5,6,7].map(n=>[String(n),String(n)]),String(g),'pills')}<div class="meter"><i style="width:${Math.min(100,w.days/g*100)}%"></i></div><span class="hint">${w.days} of ${g} days this week${w.days>=g?' · goal reached ✓':''}</span></div>
+  <div class="gcell"><span class="eyebrow">Minutes a week</span><b>${w.mins} of ${gm}</b><div class="meter"><i style="width:${Math.min(100,w.mins/gm*100)}%"></i></div><span class="hint">Change it under Practice time below.</span></div></div>
+  <div class="gcell"><span class="eyebrow">Remind me on</span><div class="pills wdays" role="group" aria-label="Reminder days">${WD.map(([k,n],i)=>`<button class="pill" data-wd="${i}" aria-pressed="${R.days.includes(i)}">${n}</button>`).join('')}</div>
+   <div class="row"><label class="popt">at <input type="time" id="rtime" value="${esc(R.time)}"></label><button class="btn primary small" id="rics">Add to my calendar</button>${canN?`<button class="btn small" id="rnot">${R.notify&&Notification.permission==='granted'?'Notifications on ✓':'Turn on notifications'}</button>`:''}</div>
+   <p class="hint">The calendar reminder works on any phone or computer, even when Theory Club is closed. ${canN?'Notifications only arrive while Theory Club is open (a tab or the desktop app), and skip days you’ve already practised.':''}</p></div></section>`}
+function icsFor(R){const pad=n=>String(n).padStart(2,'0');const[hh,mm]=R.time.split(':').map(Number);const now=new Date();let d=new Date(now);for(let i=0;i<8;i++){const wd=(d.getDay()+6)%7;if(R.days.includes(wd)&&(i>0||d.getHours()*60+d.getMinutes()<hh*60+mm))break;d.setDate(d.getDate()+1)}
+ const dt=`${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(hh)}${pad(mm)}00`;const st=new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+/,'');const url=/^https?:/.test(location.href)?location.href.split('#')[0]:'';
+ return['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Theory Club//Practice reminder//EN','BEGIN:VEVENT',`UID:tc-practice-${Date.now()}@theoryclub`,`DTSTAMP:${st}`,`DTSTART:${dt}`,`DURATION:PT${Math.max(10,Math.round((store.get('goal',120)/Math.max(1,R.days.length))))}M`,`RRULE:FREQ=WEEKLY;BYDAY=${R.days.map(i=>WD[i][0]).join(',')}`,'SUMMARY:Practise with Theory Club','DESCRIPTION:Time to play. Open Theory Club and pick up where you left off.'+(url?`\\n${url}`:''),...(url?[`URL:${url}`]:[]),'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:Time to practise','TRIGGER:-PT0M','END:VALARM','END:VEVENT','END:VCALENDAR'].join('\r\n')+'\r\n'}
+function bindGoals(root){const sec=root.querySelector('#goals');if(!sec)return;const R=remindCfg();const save=()=>store.set('remind',R);
+ bindPills(sec,(g,v)=>{if(g==='gd'){store.set('goalDays',+v);sec.outerHTML=goalsHTML();bindGoals(root)}});
+ sec.querySelectorAll('[data-wd]').forEach(b=>b.onclick=()=>{const i=+b.dataset.wd;const k=R.days.indexOf(i);if(k>=0){if(R.days.length>1)R.days.splice(k,1)}else{R.days.push(i);R.days.sort()}save();sec.querySelectorAll('[data-wd]').forEach(x=>x.setAttribute('aria-pressed',R.days.includes(+x.dataset.wd)))});
+ sec.querySelector('#rtime').onchange=e=>{if(/^\d\d:\d\d$/.test(e.target.value)){R.time=e.target.value;save()}};
+ sec.querySelector('#rics').onclick=()=>saveFile('theory-club-practice.ics',icsFor(R));
+ const n=sec.querySelector('#rnot');if(n)n.onclick=async()=>{try{const p=await Notification.requestPermission();R.notify=p==='granted';save();n.textContent=R.notify?'Notifications on ✓':'Notifications are blocked in this browser';if(R.notify)toast(`You’ll get a nudge at ${R.time} on practice days.`)}catch(e){n.textContent='Notifications aren’t available here'}}}
+{const _vp=viewProgress;viewProgress=function(...a){_vp(...a);if(!main.querySelector('#goals')){const head=main.querySelector('.pagehead');(head||main.firstElementChild).insertAdjacentHTML('afterend',goalsHTML());bindGoals(main)}}}
+/* the nudge itself, while the app is open */
+setInterval(()=>{try{const R=remindCfg();if(!R.notify||!('Notification' in window)||Notification.permission!=='granted')return;const now=new Date();const wd=(now.getDay()+6)%7;if(!R.days.includes(wd))return;const[hh,mm]=R.time.split(':').map(Number);const m=now.getHours()*60+now.getMinutes(),target=hh*60+mm;if(m<target||m>target+90)return;
+ const k=todayKey();if(store.get('remindLast','')===k)return;if(((store.get('plog',{})||{})[k]||0)>=60)return;store.set('remindLast',k);const w=weekDaysPlayed();const g=store.get('goalDays',4);
+ const n=new Notification('Time to practise',{body:w.days<g?`${w.days} of ${g} days so far this week. Ten minutes counts.`:'You’ve hit this week’s goal. A short session keeps the streak going.',tag:'tc-remind'});n.onclick=()=>{window.focus();location.hash='#train';n.close()}}catch(e){}},30000);
+/* Home: the goal at a glance */
+
+
