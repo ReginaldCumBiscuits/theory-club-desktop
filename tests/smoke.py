@@ -118,10 +118,12 @@ async def features(browser):
     print('  transcriber checked', flush=True)
     checks = [
         ('#tools-isolate', "!!document.querySelector('#tsfile')", 'transcriber page'),
-        ('#course', "document.querySelectorAll('.crsst').length===8", 'course overview'),
+        ('#course-all', "document.querySelectorAll('.crsst').length===8", 'whole course'),
+        ('#course', "!!document.querySelector('.crsnow')&&!!document.querySelector('a[href=\"#course-all\"]')", 'course: where you are'),
+        ('#home', "!!document.getElementById('tgo')&&document.querySelectorAll('.todaylist li').length>=4", "today's practice"),
+        ('#play', "document.querySelectorAll('.toolgh').length===4", 'Play page'),
         ('#course-1', "document.querySelectorAll('.crsql li').length>=3&&!!document.querySelector('.crshrs')&&!!document.querySelector('a[href=\"#plan-new\"]')", 'course stage checkpoints, song plan and practice time'),
-        ('#journey', "[...document.querySelectorAll('.secnav a')].length===3&&(document.querySelector('.sbnav [aria-current]')||{}).textContent==='Course'", 'topic quizzes inside Course'),
-        ('#tools', "document.querySelectorAll('.toolgh').length===3", 'grouped tools'),
+        ('#journey', "[...document.querySelectorAll('.secnav a')].length===4&&(document.querySelector('.sbnav [aria-current]')||{}).textContent==='Learn'", 'quizzes inside Learn'),
         ('#course-3', "document.querySelectorAll('[data-cg]').length>=4&&document.querySelectorAll('.crsgrid .panel').length>=5", 'course stage'),
         ('#home', "!!document.getElementById('skiplink')&&document.documentElement.lang==='en'&&!!document.getElementById('a11ylive')", 'skip link and screen reader announcements'),
         ('#tone-jimi-hendrix', "!!document.querySelector('.eqsvg')&&document.querySelectorAll('.tone .panel').length>=7", 'tone guide'),
@@ -174,6 +176,33 @@ async def features(browser):
     print('  features checked', flush=True)
     await ctx.close()
 
+async def first_open(browser):
+    """a brand-new person: three questions, then today's practice"""
+    ctx = await browser.new_context(viewport={'width': 1200, 'height': 900})
+    pg = await ctx.new_page()
+    errs = []
+    pg.on('pageerror', lambda e: errs.append(str(e)[:300]))
+    await pg.goto(URL)
+    await pg.wait_for_timeout(1500)
+    try:
+        await pg.click('#onb [data-i="bass"]'); await pg.click('#onbnext')
+        await pg.click('#onb [data-l="songs"]'); await pg.click('#onbnext')
+        await pg.click('#onb [data-t="relaxed"]'); await pg.click('#onbnext')
+        await pg.wait_for_timeout(1200)
+        r = await pg.evaluate("[location.hash, stageNow(), !!document.getElementById('tgo'), !!document.getElementById('onb'), store.get('inst')]")
+        if r != ['#home', 3, True, False, 'bass']:
+            fail(f'first open: {r}')
+        await pg.click('#tgo')
+        await pg.wait_for_timeout(600)
+        if not await pg.evaluate("!!document.getElementById('sessbar')&&PT.on"):
+            fail("today's practice did not start")
+    except Exception as e:
+        fail(f'first open: {e}')
+    for e in errs:
+        fail(f'script error on first open: {e}')
+    print('  first open checked', flush=True)
+    await ctx.close()
+
 async def main():
     if not os.path.exists(os.path.join(ROOT, 'index.html')):
         print('web/index.html is missing'); sys.exit(1)
@@ -182,6 +211,7 @@ async def main():
         browser = await p.chromium.launch(args=['--autoplay-policy=no-user-gesture-required'])
         print('Feature checks', flush=True)
         await features(browser)
+        await first_open(browser)
         print('Page crawl', flush=True)
         for inst in ['guitar', 'bass', 'drums', 'piano', 'voice']:
             await crawl(browser, inst)
