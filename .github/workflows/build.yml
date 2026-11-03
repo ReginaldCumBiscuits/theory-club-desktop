@@ -124,6 +124,13 @@ jobs:
         shell: bash
         run: bash scripts/fetch-onnxruntime.sh "${{ matrix.tag }}"
 
+      - name: Check the AI runtime loads and runs
+        if: matrix.name != 'mac-intel'
+        shell: bash
+        run: |
+          L=$(ls src-tauri/ort/onnxruntime.dll src-tauri/ort/libonnxruntime.dylib 2>/dev/null | head -1)
+          TC_ORT="$PWD/$L" cargo test -p theory-club --lib --release ai:: -- --nocapture
+
       - name: Build the app
         run: tauri build ${{ matrix.args }}
 

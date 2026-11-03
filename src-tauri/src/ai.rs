@@ -69,9 +69,55 @@ fn runtime_path(app: &AppHandle) -> Option<PathBuf> {
 
 static ORT: OnceLock<Result<(), String>> = OnceLock::new();
 
+/// On Windows the DirectML build of ONNX Runtime needs DirectML.dll from the same folder.
+#[cfg(target_os = "windows")]
+fn add_dll_dir(dir: &std::path::Path) {
+    use std::os::windows::ffi::OsStrExt;
+    let w: Vec<u16> = dir.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
+    unsafe {
+        windows_sys::Win32::System::LibraryLoader::SetDllDirectoryW(w.as_ptr());
+    }
+}
+
+/// A model session, on the graphics card when asked and available (DirectML on Windows, Core ML on
+/// macOS), otherwise on the processor.
+pub fn build_session(path: &std::path::Path, gpu: bool, cache: Option<&std::path::Path>) -> Result<ort::session::Session, String> {
+    let threads = std::thread::available_parallelism().map(|x| x.get()).unwrap_or(4);
+    #[allow(unused_mut)]
+    let mut b = ort::session::Session::builder().map_err(|e| e.to_string())?.with_intra_threads(threads).map_err(|e| e.to_string())?;
+    if gpu {
+        #[cfg(target_os = "windows")]
+        {
+            b = b
+                .with_memory_pattern(false)
+                .and_then(|b| b.with_parallel_execution(false))
+                .and_then(|b| b.with_execution_providers([ort::execution_providers::DirectMLExecutionProvider::default().build().error_on_failure()]))
+                .map_err(|e| e.to_string())?;
+        }
+        #[cfg(target_os = "macos")]
+        {
+            let mut ep = ort::execution_providers::CoreMLExecutionProvider::default();
+            if let Some(c) = cache {
+                ep = ep.with_model_cache_dir(c.to_string_lossy());
+            }
+            b = b.with_execution_providers([ep.build().error_on_failure()]).map_err(|e| e.to_string())?;
+        }
+        #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+        {
+            let _ = cache;
+            return Err("no graphics card support on this system".into());
+        }
+    }
+    b.commit_from_file(path).map_err(|e| e.to_string())
+}
+
 fn ort_init(app: &AppHandle) -> Result<(), String> {
     ORT.get_or_init(|| {
         let p = runtime_path(app).ok_or("This build of the app doesn't include the AI runtime.")?;
+        #[cfg(target_os = "windows")]
+        if let Some(d) = p.parent() {
+            add_dll_dir(d);
+        }
         ort::init_from(p.to_string_lossy().to_string())
             .commit()
             .map(|_| ())
@@ -187,6 +233,7 @@ pub fn ai_remove(app: AppHandle, ai: State<'_, Ai>) -> Result<(), String> {
 #[tauri::command]
 pub async fn ai_separate(app: AppHandle, request: Request<'_>) -> Result<Response, String> {
     let part = request.headers().get("x-part").and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
+    let want_gpu = request.headers().get("x-gpu").and_then(|v| v.to_str().ok()) == Some("1");
     if !sepcore::PARTS.contains(&part.as_str()) {
         return Err("Unknown part".into());
     }
@@ -206,19 +253,39 @@ pub async fn ai_separate(app: AppHandle, request: Request<'_>) -> Result<Respons
             return Err("The song is too short.".into());
         }
         let (l, r) = data.split_at(n);
-        let threads = std::thread::available_parallelism().map(|x| x.get()).unwrap_or(4);
         let mp = model_path(&app, &part)?;
-        let mut s = ort::session::Session::builder()
-            .and_then(|b| b.with_intra_threads(threads))
-            .and_then(|b| b.commit_from_file(&mp))
-            .map_err(|e| format!("The AI model couldn't load: {e}"))?;
+        let cache = model_dir(&app)?.join("gpu-cache");
+        let _ = std::fs::create_dir_all(&cache);
         let total = sepcore::chunks(n, &part).max(1);
-        let mut k = 0;
-        progress(&app, "separate", 0.0);
-        let (sl, sr) = sepcore::separate(&mut s, &part, l, r, || {
-            k += 1;
-            progress(&app, "separate", k as f32 / total as f32);
-        })?;
+        let run = |gpu: bool| -> Result<(Vec<f32>, Vec<f32>), String> {
+            let mut s = build_session(&mp, gpu, Some(&cache))?;
+            let mut k = 0;
+            progress(&app, "separate", 0.0);
+            let out = sepcore::separate(&mut s, &part, l, r, || {
+                k += 1;
+                progress(&app, "separate", k as f32 / total as f32);
+            })?;
+            if out.0.iter().take(44_100 * 4).any(|v| !v.is_finite()) {
+                return Err("the graphics card gave unusable results".into());
+            }
+            Ok(out)
+        };
+        // the graphics card first when it's on; the processor if that doesn't work
+        let (sl, sr) = if want_gpu {
+            match run(true) {
+                Ok(x) => {
+                    let _ = app.emit("ai-progress", serde_json::json!({ "stage": "device", "gpu": true }));
+                    x
+                }
+                Err(e) => {
+                    eprintln!("AI separation on the graphics card failed, using the processor: {e}");
+                    let _ = app.emit("ai-progress", serde_json::json!({ "stage": "device", "gpu": false }));
+                    run(false).map_err(|e| format!("The AI model couldn't run: {e}"))?
+                }
+            }
+        } else {
+            run(false).map_err(|e| format!("The AI model couldn't run: {e}"))?
+        };
         let (hl, hr) = (sepcore::half(&sl), sepcore::half(&sr));
         let mut out = Vec::with_capacity((hl.len() + hr.len()) * 4);
         for v in hl.iter().chain(hr.iter()) {
@@ -228,4 +295,38 @@ pub async fn ai_separate(app: AppHandle, request: Request<'_>) -> Result<Respons
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+#[cfg(test)]
+mod tests {
+    /// Release builds run this with TC_ORT pointing at the bundled runtime, so a runtime that
+    /// won't load, or a graphics-card path that crashes, stops the release.
+    #[test]
+    fn runtime_loads_and_runs() {
+        let Ok(lib) = std::env::var("TC_ORT") else {
+            eprintln!("TC_ORT not set: skipped");
+            return;
+        };
+        #[cfg(target_os = "windows")]
+        if let Some(d) = std::path::Path::new(&lib).parent() {
+            super::add_dll_dir(d);
+        }
+        ort::init_from(lib).commit().expect("ONNX Runtime should load");
+        let model = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests/tiny.onnx");
+        for gpu in [true, false] {
+            let mut s = match super::build_session(&model, gpu, None) {
+                Ok(s) => s,
+                Err(e) if gpu => {
+                    eprintln!("graphics card not available here ({e}); the app falls back to the processor");
+                    continue;
+                }
+                Err(e) => panic!("processor session failed: {e}"),
+            };
+            let x = ort::value::Tensor::from_array(([1usize, 4, 8, 8], vec![1f32; 256].into_boxed_slice())).unwrap();
+            let out = s.run(ort::inputs!["input" => x]).unwrap();
+            let (_, y) = out["output"].try_extract_tensor::<f32>().unwrap();
+            assert!((y[0] - 2.0).abs() < 1e-4, "wrong result {} (gpu {gpu})", y[0]);
+            eprintln!("ok on {}", if gpu { "the graphics card" } else { "the processor" });
+        }
+    }
 }

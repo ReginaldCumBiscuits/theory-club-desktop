@@ -48,8 +48,10 @@ jobs:
         with:
           node-version: 20
 
-      - name: Tauri CLI
-        run: npm install -g @tauri-apps/cli@2
+      - name: Tauri CLI (installed in the project, so the Android build can call it back)
+        run: |
+          [ -f package.json ] || echo '{"name":"theory-club-build","private":true,"scripts":{"tauri":"tauri"}}' > package.json
+          npm install --no-save @tauri-apps/cli@2
 
       - name: Stamp version
         if: inputs.version != ''
@@ -58,8 +60,8 @@ jobs:
       - name: Create the Android project
         run: |
           export NDK_HOME="$ANDROID_HOME/ndk/$NDK_VERSION"
-          tauri android init --ci
-          tauri icon src-tauri/icons/icon.png
+          npm run tauri -- android init --ci
+          npm run tauri -- icon src-tauri/icons/icon.png
 
       - name: Signing key
         env:
@@ -78,7 +80,7 @@ jobs:
       - name: Build the app
         run: |
           export NDK_HOME="$ANDROID_HOME/ndk/$NDK_VERSION"
-          tauri android build --apk --target aarch64 armv7 --ci
+          npm run tauri -- android build --apk --target aarch64 armv7 --ci
 
       - name: Collect the APK
         run: |
