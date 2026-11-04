@@ -3,6 +3,7 @@
 
 mod ai;
 mod sepcore;
+mod notes;
 
 use std::sync::{Arc, Mutex};
 use tauri::State;
@@ -324,6 +325,7 @@ pub fn run() {
             ai::ai_install,
             ai::ai_remove,
             ai::ai_separate,
+            ai::ai_notes,
             selftest_report,
             selftest_log
         ])

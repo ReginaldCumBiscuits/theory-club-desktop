@@ -3,7 +3,7 @@
 //! The separation models (MDX-Net, KUIELab, MIT licence) are about 119 MB, so they are downloaded the first
 //! time someone turns the feature on, checked against known SHA-256 hashes and kept in the app's data folder.
 //! ONNX Runtime ships inside the app (see scripts/fetch-onnxruntime.sh) and is loaded on first use.
-use crate::sepcore;
+use crate::{notes, sepcore};
 use sha2::{Digest, Sha256};
 use std::io::{Read, Write};
 use std::path::PathBuf;
@@ -297,6 +297,29 @@ pub async fn ai_separate(app: AppHandle, request: Request<'_>) -> Result<Respons
     .map_err(|e| e.to_string())?
 }
 
+
+/// Finds the notes in a separated part with the built-in note model. Only needs ONNX Runtime, not the
+/// separation download. Takes mono audio at 22,050 Hz; returns the note activations then the onset activations.
+#[tauri::command]
+pub async fn ai_notes(app: AppHandle, request: Request<'_>) -> Result<Response, String> {
+    let InvokeBody::Raw(bytes) = request.body() else {
+        return Err("No audio was sent".into());
+    };
+    let x: Vec<f32> = bytes.chunks_exact(4).map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]])).collect();
+    tauri::async_runtime::spawn_blocking(move || {
+        ort_init(&app)?;
+        let mut s = notes::session().map_err(|e| format!("The note model couldn't start: {e}"))?;
+        let (n, o) = notes::infer(&mut s, &x, |k, t| progress(&app, "notes", k as f32 / t as f32)).map_err(|e| format!("The note model couldn't run: {e}"))?;
+        let mut out = Vec::with_capacity((n.len() + o.len()) * 4);
+        for v in n.iter().chain(o.iter()) {
+            out.extend_from_slice(&v.to_le_bytes());
+        }
+        Ok(Response::new(out))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[cfg(test)]
 mod tests {
     /// Release builds run this with TC_ORT pointing at the bundled runtime, so a runtime that
@@ -328,5 +351,34 @@ mod tests {
             assert!((y[0] - 2.0).abs() < 1e-4, "wrong result {} (gpu {gpu})", y[0]);
             eprintln!("ok on {}", if gpu { "the graphics card" } else { "the processor" });
         }
+    }
+
+    /// The note model finds an A3 (220 Hz) as key 57.
+    #[test]
+    fn note_model_finds_a_note() {
+        let Ok(lib) = std::env::var("TC_ORT") else {
+            eprintln!("TC_ORT not set: skipped");
+            return;
+        };
+        #[cfg(target_os = "windows")]
+        if let Some(d) = std::path::Path::new(&lib).parent() {
+            super::add_dll_dir(d);
+        }
+        let _ = ort::init_from(lib).commit();
+        let sr = crate::notes::SR as f32;
+        let x: Vec<f32> = (0..(crate::notes::SR * 5)).map(|i| {
+            let t = i as f32 / sr;
+            0.3 * ((2.0 * std::f32::consts::PI * 220.0 * t).sin() + 0.5 * (2.0 * std::f32::consts::PI * 440.0 * t).sin())
+        }).collect();
+        let mut s = crate::notes::session().expect("note model should load");
+        let (n, o) = crate::notes::infer(&mut s, &x, |_, _| {}).expect("note model should run");
+        let k = crate::notes::KEYS;
+        assert_eq!(n.len(), o.len());
+        assert_eq!(n.len() / k, crate::notes::frames_for(x.len()));
+        let mid = (n.len() / k) / 2;
+        let row = &n[mid * k..(mid + 1) * k];
+        let best = row.iter().enumerate().max_by(|a, b| a.1.partial_cmp(b.1).unwrap()).unwrap().0;
+        assert_eq!(best + 21, 57, "expected A3, got key {}", best + 21);
+        eprintln!("note model ok: A3 at {:.2}", row[best]);
     }
 }
