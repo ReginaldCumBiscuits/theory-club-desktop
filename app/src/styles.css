@@ -1313,3 +1313,17 @@ body{zoom:var(--a11y-z,1)}
 .ctxg h4{margin:0 0 2px;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
 .ctxg p{margin:0;line-height:1.55}
 .ctxa{margin:0;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+
+.ctxmore{align-self:center}
+.ctxfig{margin:0;padding:14px;border-radius:12px;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;gap:8px;align-items:center}
+.ctxfig svg{width:100%;max-width:440px;height:auto;color:var(--ink)}
+.ctxfig figcaption{font-size:14px;color:var(--muted);text-align:center;max-width:52ch}
+.ctxfig .cf-t,.ctxfig .cf-ta,.ctxfig .cf-tb,.ctxfig .cf-tsm,.ctxfig .cf-tw{font:500 13px/1 system-ui,sans-serif;fill:currentColor}
+.ctxfig .cf-ta{fill:var(--accent-text);font-weight:700}.ctxfig .cf-tb{fill:var(--bad);font-weight:700}.ctxfig .cf-tsm{font-size:11px;fill:var(--muted)}.ctxfig .cf-tw{fill:var(--ink);font-weight:700;font-size:12px}
+.ctxfig .cf-fill2{fill:var(--surface-2);stroke:var(--line)}.ctxfig .cf-accf{fill:var(--accent)}.ctxfig .cf-af{fill:currentColor}.ctxfig .cf-dot{fill:var(--accent-soft);stroke:var(--accent-text);stroke-width:2}
+.ctxfig .cf-acc{stroke:var(--accent-text);stroke-width:2.5;fill:none}.ctxfig .cf-accw{stroke:var(--accent-text);stroke-width:3.5;stroke-linecap:round;fill:none}
+.ctxfig .cf-s{stroke:currentColor;stroke-width:1.5;fill:none}.ctxfig .cf-dim{opacity:.55}.ctxfig .cf-thick{stroke:var(--accent);stroke-width:14;stroke-linecap:round}.ctxfig .cf-thick.cf-dim{stroke:var(--muted)}
+.ctxfig .cf-cell{fill:var(--surface-2);stroke:var(--line)}.ctxfig .cf-key{fill:#F7F7F3;stroke:#8A8F99}.ctxfig .cf-bkey{fill:#1B1D22}
+.ctxfig .cf-nut{fill:var(--muted)}.ctxfig .cf-fret{stroke:var(--muted);stroke-width:3}.ctxfig .cf-str{stroke:var(--ink);opacity:.6}.ctxfig .cf-ring{fill:none;stroke:var(--bad);stroke-width:2.5}
+.ctxgo{color:inherit;text-decoration:underline;text-decoration-color:var(--accent);text-underline-offset:3px}
+.ctx{scroll-margin-top:84px}
