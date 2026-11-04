@@ -1340,3 +1340,9 @@ body{zoom:var(--a11y-z,1)}
 .tglink b{flex:none}.tglink span:not([aria-hidden]){flex:1;min-width:0;color:var(--muted);font-size:14px}.tglink:hover{border-color:var(--accent)}
 .tgnow{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent-text)}
 .tgsearch input{padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:15px}.tgsearch input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+/* v56: techniques on the You page */
+.ychart .ytbg{fill:var(--surface-2)}
+.ctxrevl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.ctxrevl li{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.ctxrevl li a{color:inherit;flex:1 1 220px;min-width:0}.ctxrevl li .row{gap:8px}
+.ctxrevl .btn{background:var(--surface);border:1px solid var(--line)}

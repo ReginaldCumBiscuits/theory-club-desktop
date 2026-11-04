@@ -26,3 +26,18 @@ function addGuideLinks(){if(!CTX[cInst()])return;const nav=main.querySelector('.
 /* the Learn tabs and the search box */
 NAV_SUB.course.splice(2,0,['learn-technique','Techniques']);
 {const _ci=cmdIndex;cmdIndex=function(){const out=_ci();try{const inst=cInst(),d=cData();for(const n in CTX[inst]||{}){d.stages[n].tech.forEach((nm,i)=>out.push({t:nm,h:`#learn-technique-${n}-${i}`,k:(nm+' technique stage '+n+' how to').toLowerCase(),g:'Technique'}))}out.push({t:'Technique guide',h:'#learn-technique',k:'technique guide techniques how to video',g:'Learn'})}catch(e){}return out}}
+/* v56: techniques on the You page. A card with how many you've ticked per stage, and a short list of
+   techniques you ticked three weeks or more ago to check you can still do them. */
+const CTX_REVISIT=21*864e5;
+function ctxRevisitList(inst){const dn=ctxDone(),d=cData(),now=Date.now(),out=[];
+ for(const id in dn){const[a,n,i]=id.split('-');if(a!==inst||!d.stages[n]||now-dn[id]<CTX_REVISIT)continue;out.push([id,+n,+i,d.stages[n].tech[+i],dn[id]])}
+ return out.sort((x,y)=>x[4]-y[4]).slice(0,4)}
+function ctxYouCard(){const inst=cInst();if(!CTX[inst])return'';const st=Object.keys(CTX[inst]).map(Number).sort((a,b)=>a-b);const rows=st.map(n=>ctxCount(inst,n));const g=rows.reduce((s,r)=>s+r[0],0),t=rows.reduce((s,r)=>s+r[1],0);
+ return`<div class="ytech"><span class="eyebrow">Techniques</span><b class="ybig">${g} of ${t}</b><svg viewBox="0 0 320 90" class="ychart" role="img" aria-label="Techniques ticked per stage: ${rows.map((r,i)=>`stage ${st[i]} ${r[0]} of ${r[1]}`).join(', ')}">${rows.map((r,i)=>{const h=r[1]?70*r[0]/r[1]:0;return`<rect x="${8+i*39}" y="4" width="30" height="70" rx="4" class="ytbg"/><rect x="${8+i*39}" y="${74-h}" width="30" height="${Math.max(h,0)}" rx="4" class="cur"/><text x="${23+i*39}" y="88" class="yl">${st[i]}</text>`}).join('')}</svg><span class="hint"><a href="#learn-technique">Open the technique guide</a></span></div>`}
+function ctxRevisitHTML(){const inst=cInst();if(!CTX[inst])return'';const L=ctxRevisitList(inst);if(!L.length)return'';
+ return`<section class="panel ctxrev"><h2>Still got these?</h2><p class="hint">You ticked these a few weeks ago. Play each one once: if it still feels comfortable, keep it ticked.</p>
+ <ul class="ctxrevl">${L.map(([id,n,i,nm,ts])=>`<li data-id="${id}"><a href="#learn-technique-${n}-${i}"><b>${esc(nm)}</b></a><span class="hint">Stage ${n} · ticked ${Math.floor((Date.now()-ts)/864e5)} days ago</span><span class="row"><button class="btn small" data-rv="ok">Still got it</button><button class="btn small" data-rv="no">Needs work</button></span></li>`).join('')}</ul></section>`}
+function ctxRevisitBind(root){root.querySelectorAll('.ctxrev [data-rv]').forEach(b=>b.onclick=()=>{const li=b.closest('li'),id=li.dataset.id,dn=ctxDone();if(b.dataset.rv==='ok')dn[id]=Date.now();else delete dn[id];store.set('ctxdone',dn);
+ li.innerHTML=`<span class="hint">${b.dataset.rv==='ok'?'Kept. We\'ll ask again in three weeks.':'Unticked. It\'s back in your technique list to practise.'}</span>`;const c=root.querySelector('.ytech');if(c)c.outerHTML=ctxYouCard()})}
+{const _yh=youHTML;youHTML=function(){let h=_yh();try{const card=ctxYouCard();if(card)h=h.replace('<div><span class="eyebrow">Quizzes passed',card+'<div><span class="eyebrow">Quizzes passed');h=h.replace(/(<section class="panel youview">[\s\S]*?<\/section>)/,'$1'+ctxRevisitHTML())}catch(e){}return h}}
+{const _vp=viewProgress;viewProgress=function(){_vp.apply(this,arguments);try{ctxRevisitBind(main)}catch(e){}}}
