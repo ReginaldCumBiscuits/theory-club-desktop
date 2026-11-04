@@ -1332,6 +1332,19 @@ body{zoom:var(--a11y-z,1)}
 .ctxfig .cf-nut{fill:var(--muted)}.ctxfig .cf-fret{stroke:var(--muted);stroke-width:3}.ctxfig .cf-str{stroke:var(--ink);opacity:.6}.ctxfig .cf-ring{fill:none;stroke:var(--bad);stroke-width:2.5}
 .ctxgo{color:inherit;text-decoration:underline;text-decoration-color:var(--accent);text-underline-offset:3px}
 .ctx{scroll-margin-top:84px}
+
+/* v55: technique guide */
+.tguide{display:flex;flex-direction:column;gap:16px;min-width:0}
+.tguide h2{margin:0}.tguide .lede{margin:0;max-width:65ch}
+.tgtools{display:flex;flex-direction:column;gap:10px}
+.tgsearch input{width:100%;max-width:420px}
+.tgjump{flex-wrap:wrap}
+.tgst h3{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px}
+.tgst{scroll-margin-top:84px}
+.tglink{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;border:1px solid var(--line);background:var(--accent-soft);color:var(--ink);text-decoration:none;margin-bottom:14px}
+.tglink b{flex:none}.tglink span:not([aria-hidden]){flex:1;min-width:0;color:var(--muted);font-size:14px}.tglink:hover{border-color:var(--accent)}
+.tgnow{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent-text)}
+.tgsearch input{padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:15px}.tgsearch input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 </style>
 
 <nav class="sidebar" id="sidebar" aria-label="Theory Club"></nav><div class="scrim" id="scrim" hidden></div>
@@ -9853,27 +9866,59 @@ function ctxLessons(inst,n){const t=techT(inst);const ks=Object.keys(t);if(!ks.l
 function ctxDone(){return store.get('ctxdone',{})}
 function ctxVideo(e){return e[6]?`<a class="btn small primary" href="https://www.youtube.com/watch?v=${e[6]}" target="_blank" rel="noopener" data-yt="${e[6]}" title="${esc(e[7]||'')}">▶ Watch: ${esc(e[7]||'video lesson')}</a><a class="hint ctxmore" href="${ctxYT(e[4],e[5])}" target="_blank" rel="noopener">More videos ↗</a>`
  :`<a class="btn small primary" href="${ctxYT(e[4],e[5])}" target="_blank" rel="noopener">▶ Find a video: ${esc(e[4])} ↗</a>`}
-function techStepsHTML(n){const inst=cInst(),X=cData().stages[n],E=(CTX[inst]||{})[n]||[];if(!X||!X.tech||!E.length)return'';
- const dn=ctxDone(),got=E.filter((_,i)=>dn[inst+'-'+n+'-'+i]).length,L=ctxLessons(inst,n);
- const item=(e,i)=>{const id=inst+'-'+n+'-'+i,ok=!!dn[id],sh=CTXSHOW[id];return`<details class="ctx${ok?' ok':''}" data-id="${id}"><summary><span class="ctxn" aria-hidden="true">${ok?'✓':i+1}</span><b>${esc(X.tech[i])}</b>${ok?'<span class="sr">(you can do this)</span>':''}</summary>
+function ctxItemHTML(inst,n,i,name){const e=((CTX[inst]||{})[n]||[])[i];if(!e)return'';const id=inst+'-'+n+'-'+i,ok=!!ctxDone()[id],sh=CTXSHOW[id];
+ return`<details class="ctx${ok?' ok':''}" data-id="${id}"><summary><span class="ctxn" aria-hidden="true">${ok?'✓':i+1}</span><b>${esc(name)}</b><span class="sr ctxsr">${ok?'(you can do this)':''}</span></summary>
   <div class="ctxb">${sh?`<figure class="ctxfig">${sh[0]}<figcaption>${esc(sh[1])}</figcaption></figure>`:''}<div class="ctxg"><div><h4>How to do it</h4><p>${esc(e[0])}</p></div><div><h4>What it should feel like</h4><p>${esc(e[1])}</p></div><div><h4>The usual mistake</h4><p>${esc(e[2])}</p></div><div><h4>Check yourself</h4><p>${esc(e[3])}</p></div></div>
-  <div class="row">${ctxVideo(e)}<button class="btn small ctxmark" aria-pressed="${ok}">${ok?'Ticked: I can do this':'I can do this'}</button></div></div></details>`};
- return`<section class="panel ctxp" id="ctx-${n}"><h3>Technique, step by step <span class="hint">${got} of ${E.length} ticked</span></h3>
+  <div class="row">${ctxVideo(e)}<button class="btn small ctxmark" aria-pressed="${ok}">${ok?'Ticked: I can do this':'I can do this'}</button></div></div></details>`}
+function ctxCount(inst,n){const E=(CTX[inst]||{})[n]||[],dn=ctxDone();return[E.filter((_,i)=>dn[inst+'-'+n+'-'+i]).length,E.length]}
+function techStepsHTML(n){const inst=cInst(),X=cData().stages[n],E=(CTX[inst]||{})[n]||[];if(!X||!X.tech||!E.length)return'';
+ const[got]=ctxCount(inst,n),L=ctxLessons(inst,n);
+ return`<section class="panel ctxp" id="ctx-${n}" data-n="${n}"><h3>Technique, step by step <span class="hint ctxc">${got} of ${E.length} ticked</span></h3>
  <p class="hint">Open each one to see what to do, how it should feel, the usual mistake and a video to watch. Tick it when you can do it comfortably.</p>
- <div class="ctxl">${E.map(item).join('')}</div>
+ <div class="ctxl">${E.map((_,i)=>ctxItemHTML(inst,n,i,X.tech[i])).join('')}</div>
  ${L.length?`<p class="ctxa"><b>Try it in the app:</b> ${L.map(([k,nm])=>`<a class="schip" href="#learn-tech-${inst}-${k}">${esc(nm)}</a>`).join(' ')}</p>`:''}</section>`}
-function ctxBind(root,n){root.querySelectorAll('.ctxp .ctxmark').forEach(b=>b.onclick=()=>{const d=b.closest('.ctx'),id=d.dataset.id,dn=ctxDone();if(dn[id])delete dn[id];else dn[id]=Date.now();store.set('ctxdone',dn);
- const p=root.querySelector('.ctxp');const open=[...p.querySelectorAll('.ctx')].map(x=>x.open);p.outerHTML=techStepsHTML(n);const q=root.querySelector('.ctxp');q.querySelectorAll('.ctx').forEach((x,i)=>x.open=open[i]);ctxBind(root,n);const m=q.querySelector(`[data-id="${id}"] .ctxmark`);if(m)m.focus()})}
+/* ticking updates the item and its stage's count in place, wherever it is shown */
+function ctxBind(root){root.querySelectorAll('.ctx .ctxmark').forEach(b=>b.onclick=()=>{const d=b.closest('.ctx'),id=d.dataset.id,dn=ctxDone();const ok=!dn[id];if(ok)dn[id]=Date.now();else delete dn[id];store.set('ctxdone',dn);
+ const[inst,n,i]=id.split('-');d.classList.toggle('ok',ok);d.querySelector('.ctxn').textContent=ok?'✓':(+i+1);d.querySelector('.ctxsr').textContent=ok?'(you can do this)':'';b.setAttribute('aria-pressed',ok);b.textContent=ok?'Ticked: I can do this':'I can do this';
+ const[g,t]=ctxCount(inst,+n);root.querySelectorAll(`[data-n="${n}"] .ctxc`).forEach(c=>c.textContent=`${g} of ${t} ticked`);const tot=root.querySelector('.ctxtot');if(tot)tot.textContent=ctxTotal(inst)})}
 /* which explanation to open when arriving from Today (a link there, or a practice session's technique block) */
 let CTXGO=null;
 function ctxTarget(n){if(CTXGO&&CTXGO.n===n){const i=CTXGO.i;CTXGO=null;return i}
  try{const b=SESSION&&SESSION.blocks&&SESSION.blocks[SESSION.i];if(b&&b.ctx!=null&&b.href==='#course-'+n)return b.ctx}catch(e){}return null}
-function ctxOpen(i){const d=main.querySelectorAll('.ctxp .ctx')[i];if(!d)return;d.open=true;setTimeout(()=>{d.scrollIntoView({block:'start',behavior:'smooth'});const s=d.querySelector('summary');if(s)s.focus({preventScroll:true})},60)}
-{const _vs=viewCourseStage;viewCourseStage=function(n){_vs(n);const go=ctxTarget(n);const put=()=>{if(location.hash!=='#course-'+n||main.querySelector('.ctxp'))return;const g=main.querySelector('.crsgoals');const h=techStepsHTML(n);if(g&&h){g.insertAdjacentHTML('afterend',h);ctxBind(main,n);if(go!=null)ctxOpen(go)}};put();const ob=new MutationObserver(()=>{if(location.hash!=='#course-'+n){ob.disconnect();return}put()});ob.observe(main,{childList:true})}}
+function ctxOpen(i,sel){const d=sel?main.querySelector(sel):main.querySelectorAll('.ctxp .ctx')[i];if(!d)return;d.open=true;setTimeout(()=>{d.scrollIntoView({block:'start',behavior:'smooth'});const s=d.querySelector('summary');if(s)s.focus({preventScroll:true})},60)}
+{const _vs=viewCourseStage;viewCourseStage=function(n){_vs(n);const go=ctxTarget(n);const put=()=>{if(location.hash!=='#course-'+n||main.querySelector('.ctxp'))return;const g=main.querySelector('.crsgoals');const h=techStepsHTML(n);if(g&&h){g.insertAdjacentHTML('afterend',h);ctxBind(main);if(go!=null)ctxOpen(go)}};put();const ob=new MutationObserver(()=>{if(location.hash!=='#course-'+n){ob.disconnect();return}put()});ob.observe(main,{childList:true})}}
 /* Today: the technique block points at its explanation */
 {const _tb=todayBlocks;todayBlocks=function(mins){const B=_tb(mins);try{const n=stageNow(),X=cData().stages[n],E=(CTX[cInst()]||{})[n]||[];B.forEach(b=>{if(b.name!=='Technique')return;const i=X.tech.indexOf(b.what);if(i>=0&&E[i]){b.href='#course-'+n;b.ctx=i}})}catch(e){}return B}}
 {const _vt=viewToday;viewToday=function(){_vt.apply(this,arguments);try{const n=stageNow(),X=cData().stages[n];main.querySelectorAll('li').forEach(li=>{const s=li.querySelector('.stack>span:first-child');if(!s||s.textContent!=='Technique')return;const h=li.querySelector('.stack .hint');const i=h?X.tech.indexOf(h.textContent):-1;if(i<0||!(CTX[cInst()]||{})[n])return;h.innerHTML=`<a href="#course-${n}" class="ctxgo">${esc(h.textContent)}</a> · how to do it`;h.querySelector('a').onclick=()=>{CTXGO={n,i}}})}catch(e){}}}
-window.__tc={CTX,techStepsHTML,ctxLessons,cleanIcon,manualIcon,findIcon,saveMyIcon,ICONS,buildPlan,viewMyPlan,viewPlanBuilder,techDiff,lessonPlanHTML,roadPlanHTML,ROADS,jLevels,techT,techX,VTECH,viewRoads,curRoad,setRoad,JTECH,jtQuestion,viewJTech,jMake,jUnits,JB,JG,engrave,asciiFitBar,JO,JR,joLnow,natSess,joChordAt:(...a)=>joChordAt(...a),UPD,TAB_EX,makeZip,midiFile,gtrVoice,drumVary,percHits,DKITS,drum,PLAYDB,TECH,PD,studyEx,pdEx,parseAsciiTab,scoreToEx,drumChart,topicPool,ksBuf,pianoBuf,detectPitch,audio:()=>audio(),AC:()=>AC,MASTER:()=>MASTER,tone:(...a)=>tone(...a),renderOffline:(...a)=>renderOffline(...a),itemFx:(...a)=>itemFx(...a),transformEx,chromaOf,chordMissing,packCode,unpackCode,MEDIA:()=>MEDIA,progressData,lickEx,LICKLIB,earQuestion,heardNotes,icsFor,INPUT:()=>INPUT,startTour,homeClef,noteQ,JT:()=>JT,JOURNEY:()=>JOURNEY,G:()=>G,songStepEx,TECHX:()=>TECHX,gtrOut:()=>gtrOut()};
+/* v55: the technique guide in Learn. Every technique from the course for your instrument, stage by
+   stage, with the same explanations, videos, diagrams and ticks as the course pages; searchable,
+   linked from Learn's topic list, the instrument lessons, the Learn tabs and the search box. */
+function ctxTotal(inst){let g=0,t=0;for(const n in CTX[inst]||{}){const[a,b]=ctxCount(inst,+n);g+=a;t+=b}return`${g} of ${t} ticked`}
+function techGuideHTML(){const inst=cInst(),d=cData(),now=stageNow();
+ const stages=Object.keys(CTX[inst]||{}).map(Number).sort((a,b)=>a-b);
+ return`<div class="tguide"><h2>Technique guide</h2>
+ <p class="lede">Every technique in your course, from your first day to college level. Open one to see how to do it, what it should feel like, the usual mistake, how to check yourself, and a video to watch. <span class="hint ctxtot">${ctxTotal(inst)}</span></p>
+ <div class="tgtools"><label class="tgsearch"><span class="sr">Search techniques</span><input type="search" id="tgq" placeholder="Search techniques, e.g. grip, vibrato, pedal" autocomplete="off"></label>
+ <nav class="pills tgjump" aria-label="Stages">${stages.map(n=>`<a class="pill" href="#learn-technique-${n}"${n===now?' aria-current="step"':''}>Stage ${n}</a>`).join('')}</nav></div>
+ <p class="hint" id="tgnone" hidden>No techniques match that search.</p>
+ ${stages.map(n=>{const S=COURSE.stages[n-1],X=d.stages[n],[g,t]=ctxCount(inst,n);return`<section class="panel tgst" id="tg-${n}" data-n="${n}"><h3>Stage ${n}: ${esc(S.title)} ${n===now?'<span class="tgnow">You are here</span>':''} <span class="hint ctxc">${g} of ${t} ticked</span></h3>
+  <div class="ctxl">${X.tech.map((nm,i)=>ctxItemHTML(inst,n,i,nm)).join('')}</div>
+  <p class="hint"><a href="#course-${n}">Open stage ${n} of the course</a></p></section>`}).join('')}</div>`}
+function techGuideBind(){const q=main.querySelector('#tgq');if(!q)return;ctxBind(main);
+ q.oninput=()=>{const w=q.value.toLowerCase().trim().split(/\s+/).filter(Boolean);let any=0;
+  main.querySelectorAll('.tgst').forEach(s=>{let vis=0;s.querySelectorAll('.ctx').forEach(d=>{const ok=!w.length||w.every(x=>d.textContent.toLowerCase().includes(x));d.hidden=!ok;if(ok)vis++});s.hidden=!vis;any+=vis});
+  main.querySelector('#tgnone').hidden=!!any}}
+/* Learn: the guide lives in the Learn layout, under its own group in the topic list */
+{const _vl=viewLearn;viewLearn=function(id){const m=/^technique(?:-(\d+)(?:-(\d+))?)?$/.exec(id||'');if(!m||!CTX[cInst()]){_vl(id);return addGuideLinks()}
+ _vl(INST_PRI[INST_RAW()]?.[0]||id);const lb=main.querySelector('#lb'),lm=main.querySelector('.lmain');if(!lb||!lm){main.innerHTML=techGuideHTML()}else{lm.innerHTML=techGuideHTML()}
+ addGuideLinks();main.querySelectorAll('.lnav a').forEach(a=>{if(a.getAttribute('href')==='#learn-technique')a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});techGuideBind();
+ const n=m[1]&&+m[1],i=m[2]!=null?+m[2]:null;if(n&&i!=null)ctxOpen(0,`.ctx[data-id="${cInst()}-${n}-${i}"]`);else if(n){const s=main.querySelector('#tg-'+n);if(s)setTimeout(()=>s.scrollIntoView({block:'start'}),40)}}}
+function addGuideLinks(){if(!CTX[cInst()])return;const nav=main.querySelector('.lnav');if(nav&&!nav.querySelector('[href="#learn-technique"]'))nav.insertAdjacentHTML('afterbegin','<span class="lgrp">Technique</span><a href="#learn-technique">Technique guide</a>');
+ const lb=main.querySelector('#lb');const h=location.hash.slice(7);if(lb&&instLearn().some(l=>l[0]===h)&&!main.querySelector('.tglink')){lb.insertAdjacentHTML('afterbegin',`<a class="tglink" href="#learn-technique"><b>Technique guide</b><span>Every technique in your course, step by step, with videos and diagrams. ${esc(ctxTotal(cInst()))}.</span><span aria-hidden="true">→</span></a>`)}}
+/* the Learn tabs and the search box */
+NAV_SUB.course.splice(2,0,['learn-technique','Techniques']);
+{const _ci=cmdIndex;cmdIndex=function(){const out=_ci();try{const inst=cInst(),d=cData();for(const n in CTX[inst]||{}){d.stages[n].tech.forEach((nm,i)=>out.push({t:nm,h:`#learn-technique-${n}-${i}`,k:(nm+' technique stage '+n+' how to').toLowerCase(),g:'Technique'}))}out.push({t:'Technique guide',h:'#learn-technique',k:'technique guide techniques how to video',g:'Learn'})}catch(e){}return out}}
+window.__tc={CTX,techGuideHTML,techStepsHTML,ctxLessons,cleanIcon,manualIcon,findIcon,saveMyIcon,ICONS,buildPlan,viewMyPlan,viewPlanBuilder,techDiff,lessonPlanHTML,roadPlanHTML,ROADS,jLevels,techT,techX,VTECH,viewRoads,curRoad,setRoad,JTECH,jtQuestion,viewJTech,jMake,jUnits,JB,JG,engrave,asciiFitBar,JO,JR,joLnow,natSess,joChordAt:(...a)=>joChordAt(...a),UPD,TAB_EX,makeZip,midiFile,gtrVoice,drumVary,percHits,DKITS,drum,PLAYDB,TECH,PD,studyEx,pdEx,parseAsciiTab,scoreToEx,drumChart,topicPool,ksBuf,pianoBuf,detectPitch,audio:()=>audio(),AC:()=>AC,MASTER:()=>MASTER,tone:(...a)=>tone(...a),renderOffline:(...a)=>renderOffline(...a),itemFx:(...a)=>itemFx(...a),transformEx,chromaOf,chordMissing,packCode,unpackCode,MEDIA:()=>MEDIA,progressData,lickEx,LICKLIB,earQuestion,heardNotes,icsFor,INPUT:()=>INPUT,startTour,homeClef,noteQ,JT:()=>JT,JOURNEY:()=>JOURNEY,G:()=>G,songStepEx,TECHX:()=>TECHX,gtrOut:()=>gtrOut()};
 /* ---------- router ---------- */
 function route(){stopSeq();stopLoop();stopDemo();QUIZ=null;clearInterval(WU_T);focusOff();const h=location.hash.slice(1)||'home';const tab=h.startsWith('learn')?'learn':h.startsWith('tools')?'tools':h==='progress'?'plan':['practice','plan'].includes(h)?h:'daily';
  renderChrome(h);
