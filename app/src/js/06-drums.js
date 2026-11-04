@@ -4,7 +4,7 @@ function noise(){if(NOISE)return NOISE;const c=AC,b=c.createBuffer(1,c.sampleRat
 function env(g,t,peak,dec){g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0002,peak),t+.003);g.gain.exponentialRampToValueAtTime(0.0001,t+dec)}
 function nz(t,type,freq,peak,dec,q=0.7){const c=AC,s=c.createBufferSource();s.buffer=noise();const f=c.createBiquadFilter();f.type=type;f.frequency.value=freq;f.Q.value=q;const g=c.createGain();env(g,t,peak,dec);s.connect(f).connect(g).connect(MASTER);s.start(t);s.stop(t+dec+.05)}
 function osc(t,type,f0,f1,peak,dec){const c=AC,o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(f1,t+dec*.6);env(g,t,peak,dec);o.connect(g).connect(MASTER);o.start(t);o.stop(t+dec+.05)}
-/* ---------- recorded samples: FluidR3 GM (CC BY 3.0) for piano and bass, MusyngKite (CC BY-SA 3.0) for guitar; VCSL (CC0) for drums ---------- */
+/* ---------- recorded samples: FluidR3 GM (CC BY 3.0) for piano, tonejs-instruments (CC BY 3.0) for bass, MusyngKite (CC BY-SA 3.0) for guitar; VCSL (CC0) for drums ---------- */
 const SMPDATA=(()=>{const C={};const get=k=>{if(k in C)return C[k];let v;try{const el=document.getElementById('tc-smp-'+k);v=el?JSON.parse(el.textContent):undefined}catch(e){v=undefined}if(v!==undefined)C[k]=v;return v};return new Proxy({},{get:(t,k)=>typeof k==='string'?get(k):undefined,has:(t,k)=>!!get(k)})})();
 const SMP={},SMPP={};let SND=store.get('snd','samples');
 function b64ab(s){const bin=atob(s);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u.buffer}
@@ -13,7 +13,7 @@ function loadSamples(kind){if(!AC||!SMPDATA[kind])return null;if(SMPP[kind])retu
  SMPP[kind]=Promise.all(Object.entries(SMPDATA[kind]).map(([k,b])=>new Promise(res=>{try{AC.decodeAudioData(b64ab(b),buf=>{SMP[kind][k]=prepS(buf);res()},()=>res())}catch(e){res()}}))).then(()=>{SMP[kind].ready=Object.keys(SMP[kind]).length>0});return SMPP[kind]}
 const DRUM_LVL={kick:.95,snare:.8,rim:.5,hat:.36,open:.4,crash:.45,ride:.34,tom1:.72,tom2:.78};
 /* tuning offsets of the recorded guitar notes, in cents, measured so chords ring in tune */
-const SMP_CENTS={guitar:{"40":-10,"42":-16,"44":-9,"46":-16,"48":-8,"50":-10,"52":-13,"54":-13,"56":-8,"58":3,"60":-3,"62":-4,"64":-6,"66":-2,"68":-4,"70":5,"72":-4,"74":-3,"76":4,"78":6,"80":7,"82":1,"84":-2,"86":-2,"88":-2}};
+const SMP_CENTS={bass:{"28":6,"31":-4,"34":0,"37":0,"40":-1,"43":-2,"46":0,"49":0,"52":-2,"55":0,"58":0,"61":-2,"64":-2,"67":0},guitar:{"40":-10,"42":-16,"44":-9,"46":-16,"48":-8,"50":-10,"52":-13,"54":-13,"56":-8,"58":3,"60":-3,"62":-4,"64":-6,"66":-2,"68":-4,"70":5,"72":-4,"74":-3,"76":4,"78":6,"80":7,"82":1,"84":-2,"86":-2,"88":-2}};
 function playSample(s,t,gain,rate,dest,maxEnd,fx){const c=AC;const src=c.createBufferSource();src.buffer=s.buf;src.playbackRate.value=rate;const g=c.createGain();const natural=t+(s.buf.duration-s.off)/rate;const end=Math.min(natural,maxEnd==null?natural:maxEnd);
  if(fx&&fx.soft){g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(gain,t+.012)}else g.gain.setValueAtTime(gain,t);if(end<natural-.01){g.gain.setValueAtTime(gain,Math.max(t+.02,end-.08));g.gain.linearRampToValueAtTime(.0001,end)}if(fx)pitchFx(src,t,end,fx);src.connect(g).connect(slapOut(g,fx,dest));src.start(t,s.off);src.stop(end+.02)}
 /* ---------- v35: playing technique marks (bends, vibrato, slides, legato) ---------- */

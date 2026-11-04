@@ -78,7 +78,8 @@
    "src/js/61-v52-more-play-alongs-and-tunes-demos-for-every-stage-and-for.js",
    "src/js/62-v53-technique-step-by-step-in-the-course.js",
    "src/js/63-v55-technique-guide-in-learn.js",
-   "src/js/64-startup.js"
+   "src/js/64-v57-note-model-for-the-transcriber.js",
+   "src/js/65-startup.js"
   ]
  },
  {
@@ -125,6 +126,15 @@
   "kind": "json",
   "id": "tc-smp-guitarE",
   "file": "data/tc-smp-guitarE.json"
+ },
+ {
+  "kind": "text",
+  "text": "\n"
+ },
+ {
+  "kind": "json",
+  "id": "tc-smp-bpmodel",
+  "file": "data/tc-smp-bpmodel.json"
  },
  {
   "kind": "text",

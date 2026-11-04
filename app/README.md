@@ -31,7 +31,7 @@ The pull-request tests fail if `web/index.html` doesn't match these modules, so 
   anywhere in the same block.
 - `01`–`08` are the core: storage, random numbers, music theory, audio and drawing. Everything from
   `09-ui.js` on runs inside `if (typeof document !== 'undefined') { … }`, which closes at the end of
-  `64-startup.js`. Names declared there are **not** visible to the browser console; modules that tests need
+  `65-startup.js`. Names declared there are **not** visible to the browser console; modules that tests need
   export a few with `Object.assign(window, {…})`.
 - Later modules extend earlier ones with **wrappers** instead of editing them:
   ```js
@@ -48,7 +48,7 @@ The pull-request tests fail if `web/index.html` doesn't match these modules, so 
 
 | Area | Modules |
 |---|---|
-| Router and start-up | `64-startup` (`route()`, test exports, launch) |
+| Router and start-up | `65-startup` (`route()`, test exports, launch) |
 | Music theory, question generators | `03`, `08`, `20`–`22`, `36`–`37` |
 | Lessons, Learn pages | `09-ui`, `18`, `32`, `38`, `41` |
 | Course, checkpoints, practice time | `56` (course), `58` (practice time), `59` (gentler course page), `62` (technique, step by step), `63` (technique guide in Learn) |
@@ -65,5 +65,5 @@ The pull-request tests fail if `web/index.html` doesn't match these modules, so 
 
 1. Small change to an existing feature: edit its module.
 2. A new feature: add `app/src/js/NN-name.js` and list it in `manifest.json` **before the last module**
-   (`64-startup.js` closes the main block and starts the app).
+   (`65-startup.js` closes the main block and starts the app).
 3. Run the build, the check and the tests; then `sh scripts/sync-web.sh`.
