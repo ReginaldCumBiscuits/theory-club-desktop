@@ -1327,3 +1327,16 @@ body{zoom:var(--a11y-z,1)}
 .ctxfig .cf-nut{fill:var(--muted)}.ctxfig .cf-fret{stroke:var(--muted);stroke-width:3}.ctxfig .cf-str{stroke:var(--ink);opacity:.6}.ctxfig .cf-ring{fill:none;stroke:var(--bad);stroke-width:2.5}
 .ctxgo{color:inherit;text-decoration:underline;text-decoration-color:var(--accent);text-underline-offset:3px}
 .ctx{scroll-margin-top:84px}
+
+/* v55: technique guide */
+.tguide{display:flex;flex-direction:column;gap:16px;min-width:0}
+.tguide h2{margin:0}.tguide .lede{margin:0;max-width:65ch}
+.tgtools{display:flex;flex-direction:column;gap:10px}
+.tgsearch input{width:100%;max-width:420px}
+.tgjump{flex-wrap:wrap}
+.tgst h3{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px}
+.tgst{scroll-margin-top:84px}
+.tglink{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;border:1px solid var(--line);background:var(--accent-soft);color:var(--ink);text-decoration:none;margin-bottom:14px}
+.tglink b{flex:none}.tglink span:not([aria-hidden]){flex:1;min-width:0;color:var(--muted);font-size:14px}.tglink:hover{border-color:var(--accent)}
+.tgnow{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent-text)}
+.tgsearch input{padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:15px}.tgsearch input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}

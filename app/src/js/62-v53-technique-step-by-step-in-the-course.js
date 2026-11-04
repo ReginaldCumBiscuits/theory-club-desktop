@@ -15,23 +15,27 @@ function ctxLessons(inst,n){const t=techT(inst);const ks=Object.keys(t);if(!ks.l
 function ctxDone(){return store.get('ctxdone',{})}
 function ctxVideo(e){return e[6]?`<a class="btn small primary" href="https://www.youtube.com/watch?v=${e[6]}" target="_blank" rel="noopener" data-yt="${e[6]}" title="${esc(e[7]||'')}">▶ Watch: ${esc(e[7]||'video lesson')}</a><a class="hint ctxmore" href="${ctxYT(e[4],e[5])}" target="_blank" rel="noopener">More videos ↗</a>`
  :`<a class="btn small primary" href="${ctxYT(e[4],e[5])}" target="_blank" rel="noopener">▶ Find a video: ${esc(e[4])} ↗</a>`}
-function techStepsHTML(n){const inst=cInst(),X=cData().stages[n],E=(CTX[inst]||{})[n]||[];if(!X||!X.tech||!E.length)return'';
- const dn=ctxDone(),got=E.filter((_,i)=>dn[inst+'-'+n+'-'+i]).length,L=ctxLessons(inst,n);
- const item=(e,i)=>{const id=inst+'-'+n+'-'+i,ok=!!dn[id],sh=CTXSHOW[id];return`<details class="ctx${ok?' ok':''}" data-id="${id}"><summary><span class="ctxn" aria-hidden="true">${ok?'✓':i+1}</span><b>${esc(X.tech[i])}</b>${ok?'<span class="sr">(you can do this)</span>':''}</summary>
+function ctxItemHTML(inst,n,i,name){const e=((CTX[inst]||{})[n]||[])[i];if(!e)return'';const id=inst+'-'+n+'-'+i,ok=!!ctxDone()[id],sh=CTXSHOW[id];
+ return`<details class="ctx${ok?' ok':''}" data-id="${id}"><summary><span class="ctxn" aria-hidden="true">${ok?'✓':i+1}</span><b>${esc(name)}</b><span class="sr ctxsr">${ok?'(you can do this)':''}</span></summary>
   <div class="ctxb">${sh?`<figure class="ctxfig">${sh[0]}<figcaption>${esc(sh[1])}</figcaption></figure>`:''}<div class="ctxg"><div><h4>How to do it</h4><p>${esc(e[0])}</p></div><div><h4>What it should feel like</h4><p>${esc(e[1])}</p></div><div><h4>The usual mistake</h4><p>${esc(e[2])}</p></div><div><h4>Check yourself</h4><p>${esc(e[3])}</p></div></div>
-  <div class="row">${ctxVideo(e)}<button class="btn small ctxmark" aria-pressed="${ok}">${ok?'Ticked: I can do this':'I can do this'}</button></div></div></details>`};
- return`<section class="panel ctxp" id="ctx-${n}"><h3>Technique, step by step <span class="hint">${got} of ${E.length} ticked</span></h3>
+  <div class="row">${ctxVideo(e)}<button class="btn small ctxmark" aria-pressed="${ok}">${ok?'Ticked: I can do this':'I can do this'}</button></div></div></details>`}
+function ctxCount(inst,n){const E=(CTX[inst]||{})[n]||[],dn=ctxDone();return[E.filter((_,i)=>dn[inst+'-'+n+'-'+i]).length,E.length]}
+function techStepsHTML(n){const inst=cInst(),X=cData().stages[n],E=(CTX[inst]||{})[n]||[];if(!X||!X.tech||!E.length)return'';
+ const[got]=ctxCount(inst,n),L=ctxLessons(inst,n);
+ return`<section class="panel ctxp" id="ctx-${n}" data-n="${n}"><h3>Technique, step by step <span class="hint ctxc">${got} of ${E.length} ticked</span></h3>
  <p class="hint">Open each one to see what to do, how it should feel, the usual mistake and a video to watch. Tick it when you can do it comfortably.</p>
- <div class="ctxl">${E.map(item).join('')}</div>
+ <div class="ctxl">${E.map((_,i)=>ctxItemHTML(inst,n,i,X.tech[i])).join('')}</div>
  ${L.length?`<p class="ctxa"><b>Try it in the app:</b> ${L.map(([k,nm])=>`<a class="schip" href="#learn-tech-${inst}-${k}">${esc(nm)}</a>`).join(' ')}</p>`:''}</section>`}
-function ctxBind(root,n){root.querySelectorAll('.ctxp .ctxmark').forEach(b=>b.onclick=()=>{const d=b.closest('.ctx'),id=d.dataset.id,dn=ctxDone();if(dn[id])delete dn[id];else dn[id]=Date.now();store.set('ctxdone',dn);
- const p=root.querySelector('.ctxp');const open=[...p.querySelectorAll('.ctx')].map(x=>x.open);p.outerHTML=techStepsHTML(n);const q=root.querySelector('.ctxp');q.querySelectorAll('.ctx').forEach((x,i)=>x.open=open[i]);ctxBind(root,n);const m=q.querySelector(`[data-id="${id}"] .ctxmark`);if(m)m.focus()})}
+/* ticking updates the item and its stage's count in place, wherever it is shown */
+function ctxBind(root){root.querySelectorAll('.ctx .ctxmark').forEach(b=>b.onclick=()=>{const d=b.closest('.ctx'),id=d.dataset.id,dn=ctxDone();const ok=!dn[id];if(ok)dn[id]=Date.now();else delete dn[id];store.set('ctxdone',dn);
+ const[inst,n,i]=id.split('-');d.classList.toggle('ok',ok);d.querySelector('.ctxn').textContent=ok?'✓':(+i+1);d.querySelector('.ctxsr').textContent=ok?'(you can do this)':'';b.setAttribute('aria-pressed',ok);b.textContent=ok?'Ticked: I can do this':'I can do this';
+ const[g,t]=ctxCount(inst,+n);root.querySelectorAll(`[data-n="${n}"] .ctxc`).forEach(c=>c.textContent=`${g} of ${t} ticked`);const tot=root.querySelector('.ctxtot');if(tot)tot.textContent=ctxTotal(inst)})}
 /* which explanation to open when arriving from Today (a link there, or a practice session's technique block) */
 let CTXGO=null;
 function ctxTarget(n){if(CTXGO&&CTXGO.n===n){const i=CTXGO.i;CTXGO=null;return i}
  try{const b=SESSION&&SESSION.blocks&&SESSION.blocks[SESSION.i];if(b&&b.ctx!=null&&b.href==='#course-'+n)return b.ctx}catch(e){}return null}
-function ctxOpen(i){const d=main.querySelectorAll('.ctxp .ctx')[i];if(!d)return;d.open=true;setTimeout(()=>{d.scrollIntoView({block:'start',behavior:'smooth'});const s=d.querySelector('summary');if(s)s.focus({preventScroll:true})},60)}
-{const _vs=viewCourseStage;viewCourseStage=function(n){_vs(n);const go=ctxTarget(n);const put=()=>{if(location.hash!=='#course-'+n||main.querySelector('.ctxp'))return;const g=main.querySelector('.crsgoals');const h=techStepsHTML(n);if(g&&h){g.insertAdjacentHTML('afterend',h);ctxBind(main,n);if(go!=null)ctxOpen(go)}};put();const ob=new MutationObserver(()=>{if(location.hash!=='#course-'+n){ob.disconnect();return}put()});ob.observe(main,{childList:true})}}
+function ctxOpen(i,sel){const d=sel?main.querySelector(sel):main.querySelectorAll('.ctxp .ctx')[i];if(!d)return;d.open=true;setTimeout(()=>{d.scrollIntoView({block:'start',behavior:'smooth'});const s=d.querySelector('summary');if(s)s.focus({preventScroll:true})},60)}
+{const _vs=viewCourseStage;viewCourseStage=function(n){_vs(n);const go=ctxTarget(n);const put=()=>{if(location.hash!=='#course-'+n||main.querySelector('.ctxp'))return;const g=main.querySelector('.crsgoals');const h=techStepsHTML(n);if(g&&h){g.insertAdjacentHTML('afterend',h);ctxBind(main);if(go!=null)ctxOpen(go)}};put();const ob=new MutationObserver(()=>{if(location.hash!=='#course-'+n){ob.disconnect();return}put()});ob.observe(main,{childList:true})}}
 /* Today: the technique block points at its explanation */
 {const _tb=todayBlocks;todayBlocks=function(mins){const B=_tb(mins);try{const n=stageNow(),X=cData().stages[n],E=(CTX[cInst()]||{})[n]||[];B.forEach(b=>{if(b.name!=='Technique')return;const i=X.tech.indexOf(b.what);if(i>=0&&E[i]){b.href='#course-'+n;b.ctx=i}})}catch(e){}return B}}
 {const _vt=viewToday;viewToday=function(){_vt.apply(this,arguments);try{const n=stageNow(),X=cData().stages[n];main.querySelectorAll('li').forEach(li=>{const s=li.querySelector('.stack>span:first-child');if(!s||s.textContent!=='Technique')return;const h=li.querySelector('.stack .hint');const i=h?X.tech.indexOf(h.textContent):-1;if(i<0||!(CTX[cInst()]||{})[n])return;h.innerHTML=`<a href="#course-${n}" class="ctxgo">${esc(h.textContent)}</a> · how to do it`;h.querySelector('a').onclick=()=>{CTXGO={n,i}}})}catch(e){}}}
