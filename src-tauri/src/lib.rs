@@ -2,8 +2,8 @@
 //! exposed to the page as Tauri commands.
 
 mod ai;
-mod sepcore;
 mod notes;
+mod sepcore;
 
 use std::sync::{Arc, Mutex};
 use tauri::State;
@@ -48,22 +48,42 @@ fn update_install() -> Result<(), String> {
 /// Returns the new version once it's ready to install, or None if up to date.
 #[cfg(desktop)]
 #[tauri::command]
-async fn update_check(app: tauri::AppHandle, pending: State<'_, Pending>) -> Result<Option<UpdateInfo>, String> {
+async fn update_check(
+    app: tauri::AppHandle,
+    pending: State<'_, Pending>,
+) -> Result<Option<UpdateInfo>, String> {
     use tauri_plugin_updater::UpdaterExt;
     if let Some((u, _)) = pending.0.lock().unwrap().as_ref() {
-        return Ok(Some(UpdateInfo { current: u.current_version.clone(), version: u.version.clone(), notes: u.body.clone() }));
+        return Ok(Some(UpdateInfo {
+            current: u.current_version.clone(),
+            version: u.version.clone(),
+            notes: u.body.clone(),
+        }));
     }
     #[allow(unused_mut)]
     let mut b = app.updater_builder();
     #[cfg(debug_assertions)]
     if let Ok(u) = std::env::var("TC_UPDATE_URL") {
-        b = b.endpoints(vec![u.parse().map_err(|e: url::ParseError| e.to_string())?]).map_err(|e| e.to_string())?;
+        b = b
+            .endpoints(vec![u
+                .parse()
+                .map_err(|e: url::ParseError| e.to_string())?])
+            .map_err(|e| e.to_string())?;
     }
     let up = b.build().map_err(|e| e.to_string())?;
-    let Some(u) = up.check().await.map_err(|e| e.to_string())? else { return Ok(None) };
+    let Some(u) = up.check().await.map_err(|e| e.to_string())? else {
+        return Ok(None);
+    };
     // download (the signature is verified here; a tampered file is rejected)
-    let bytes = u.download(|_, _| {}, || {}).await.map_err(|e| e.to_string())?;
-    let info = UpdateInfo { current: u.current_version.clone(), version: u.version.clone(), notes: u.body.clone() };
+    let bytes = u
+        .download(|_, _| {}, || {})
+        .await
+        .map_err(|e| e.to_string())?;
+    let info = UpdateInfo {
+        current: u.current_version.clone(),
+        version: u.version.clone(),
+        notes: u.body.clone(),
+    };
     *pending.0.lock().unwrap() = Some((u, bytes));
     Ok(Some(info))
 }
@@ -71,8 +91,14 @@ async fn update_check(app: tauri::AppHandle, pending: State<'_, Pending>) -> Res
 /// Installs the downloaded update and restarts the app.
 #[cfg(desktop)]
 #[tauri::command]
-fn update_install(app: tauri::AppHandle, pending: State<'_, Pending>, eng: State<'_, Eng>) -> Result<(), String> {
-    let Some((u, bytes)) = pending.0.lock().unwrap().take() else { return Err("No update is ready".into()) };
+fn update_install(
+    app: tauri::AppHandle,
+    pending: State<'_, Pending>,
+    eng: State<'_, Eng>,
+) -> Result<(), String> {
+    let Some((u, bytes)) = pending.0.lock().unwrap().take() else {
+        return Err("No update is ready".into());
+    };
     eng.0.net_close();
     eng.0.stop_audio();
     u.install(bytes).map_err(|e| e.to_string())?;
@@ -98,13 +124,17 @@ fn engine_hosts(e: State<Eng>) -> Vec<HostInfo> {
 #[tauri::command]
 async fn engine_devices(e: State<'_, Eng>, host: Option<String>) -> Result<DevList, String> {
     let eng = e.0.clone();
-    tauri::async_runtime::spawn_blocking(move || eng.devices(host.as_deref())).await.map_err(|x| x.to_string())?
+    tauri::async_runtime::spawn_blocking(move || eng.devices(host.as_deref()))
+        .await
+        .map_err(|x| x.to_string())?
 }
 
 #[tauri::command]
 async fn engine_start(e: State<'_, Eng>, cfg: AudioCfg) -> Result<AudioInfo, String> {
     let eng = e.0.clone();
-    tauri::async_runtime::spawn_blocking(move || eng.start_audio(cfg)).await.map_err(|x| x.to_string())?
+    tauri::async_runtime::spawn_blocking(move || eng.start_audio(cfg))
+        .await
+        .map_err(|x| x.to_string())?
 }
 
 #[tauri::command]
@@ -113,7 +143,12 @@ fn engine_stop(e: State<Eng>) {
 }
 
 #[tauri::command]
-fn engine_set_local(e: State<Eng>, monitor: Option<bool>, input_gain: Option<f32>, monitor_gain: Option<f32>) {
+fn engine_set_local(
+    e: State<Eng>,
+    monitor: Option<bool>,
+    input_gain: Option<f32>,
+    monitor_gain: Option<f32>,
+) {
     e.0.set_local(monitor, input_gain, monitor_gain)
 }
 
@@ -138,9 +173,17 @@ fn engine_set_peer(e: State<Eng>, key: String, gain: Option<f32>, mute: Option<b
 }
 
 #[tauri::command]
-async fn net_open(e: State<'_, Eng>, room: String, me: String, host: String, port: Option<u16>) -> Result<NetInfo, String> {
+async fn net_open(
+    e: State<'_, Eng>,
+    room: String,
+    me: String,
+    host: String,
+    port: Option<u16>,
+) -> Result<NetInfo, String> {
     let eng = e.0.clone();
-    tauri::async_runtime::spawn_blocking(move || eng.net_open(&room, &me, &host, port.unwrap_or(0))).await.map_err(|x| x.to_string())?
+    tauri::async_runtime::spawn_blocking(move || eng.net_open(&room, &me, &host, port.unwrap_or(0)))
+        .await
+        .map_err(|x| x.to_string())?
 }
 
 #[tauri::command]
@@ -160,11 +203,36 @@ fn net_close(e: State<Eng>) {
 
 /// Starts recording the jam: one WAV per player in Music/Theory Club jams/<folder>.
 #[tauri::command]
-fn rec_start(app: tauri::AppHandle, e: State<Eng>, folder: String, me: String) -> Result<String, String> {
+fn rec_start(
+    app: tauri::AppHandle,
+    e: State<Eng>,
+    folder: String,
+    me: String,
+) -> Result<String, String> {
     use tauri::Manager;
-    let base = app.path().audio_dir().or_else(|_| app.path().document_dir()).or_else(|_| app.path().home_dir()).map_err(|x| x.to_string())?;
-    let safe: String = folder.chars().map(|c| if c.is_alphanumeric() || " -_".contains(c) { c } else { '-' }).collect();
-    let dir = base.join("Theory Club jams").join(if safe.trim().is_empty() { "Jam".to_string() } else { safe.trim().to_string() });
+    let base = app
+        .path()
+        .audio_dir()
+        .or_else(|_| app.path().document_dir())
+        .or_else(|_| app.path().home_dir())
+        .map_err(|x| x.to_string())?;
+    let safe: String = folder
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || " -_".contains(c) {
+                c
+            } else {
+                '-'
+            }
+        })
+        .collect();
+    let dir = base
+        .join("Theory Club jams")
+        .join(if safe.trim().is_empty() {
+            "Jam".to_string()
+        } else {
+            safe.trim().to_string()
+        });
     e.0.rec_start(&dir, &me)?;
     Ok(dir.to_string_lossy().into_owned())
 }
@@ -290,7 +358,9 @@ pub fn run() {
     let engine = Engine::new();
     let builder = tauri::Builder::default();
     #[cfg(desktop)]
-    let builder = builder.plugin(tauri_plugin_updater::Builder::new().build()).plugin(tauri_plugin_process::init());
+    let builder = builder
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init());
     builder
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
@@ -336,7 +406,10 @@ pub fn run() {
                     std::thread::spawn(move || {
                         std::thread::sleep(std::time::Duration::from_secs(3));
                         if std::env::var("TC_SELFTEST_AI").is_ok() {
-                            let _ = w.eval(format!("window.__aiExpect = {:?};", std::env::var("TC_SELFTEST_AI").unwrap_or_default()));
+                            let _ = w.eval(format!(
+                                "window.__aiExpect = {:?};",
+                                std::env::var("TC_SELFTEST_AI").unwrap_or_default()
+                            ));
                         }
                         if let Ok(x) = std::env::var("TC_SELFTEST_UPDATE") {
                             let _ = w.eval(format!("window.__updExpect = {:?};", x));
@@ -356,7 +429,10 @@ pub fn run() {
             #[cfg(desktop)]
             if let tauri::RunEvent::Exit = event {
                 use tauri::Manager;
-                let on = app.state::<AutoUpdate>().0.load(std::sync::atomic::Ordering::Relaxed);
+                let on = app
+                    .state::<AutoUpdate>()
+                    .0
+                    .load(std::sync::atomic::Ordering::Relaxed);
                 let ready = app.state::<Pending>().0.lock().unwrap().take();
                 if let (true, Some((u, bytes))) = (on, ready) {
                     let eng = app.state::<Eng>();
