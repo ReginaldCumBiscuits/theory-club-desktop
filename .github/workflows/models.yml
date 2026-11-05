@@ -1,0 +1,33 @@
+# Publishes an AI model file as a download for the desktop app.
+# The file is pushed to a short-lived branch first; this attaches it to a model release
+# (marked pre-release, separate from app releases) so the app can download it with a fixed address.
+name: Publish AI model
+on:
+  workflow_dispatch:
+    inputs:
+      branch: { description: "Branch holding the file", required: true }
+      file: { description: "File in that branch", required: true }
+      tag: { description: "Release tag, e.g. ai-models-1", required: true }
+      sha256: { description: "Expected SHA-256 of the file", required: true }
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+          lfs: false
+      - name: Check the file
+        run: echo "${{ inputs.sha256 }}  ${{ inputs.file }}" | sha256sum -c -
+      - name: Attach it to the model release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "${{ inputs.tag }}" >/dev/null 2>&1; then
+            gh release create "${{ inputs.tag }}" --prerelease --target main \
+              --title "AI models (${{ inputs.tag }})" \
+              --notes "Model files the desktop app downloads for AI stem separation. Not an app release. See src-tauri/models/NOTICE.md for where they come from and their licences."
+          fi
+          gh release upload "${{ inputs.tag }}" "${{ inputs.file }}" --clobber

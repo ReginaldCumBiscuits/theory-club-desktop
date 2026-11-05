@@ -1,125 +1,159 @@
-//! AI stem separation (MDX-Net, KUIELab "A" models from the Music Demixing Challenge 2021).
-//! Each model takes a short-time Fourier transform of a stereo chunk (about 24 seconds) and returns the
-//! transform of one part: vocals, bass, drums or everything else.
+//! AI stem separation with SCNet (Sparse Compression Network, Tong et al. 2024; small model trained on MUSDB18
+//! by ZFTurbo's Music-Source-Separation-Training). One pass gives all four parts at once: drums, bass,
+//! everything else, and vocals. The model works on the short-time Fourier transform of an 11-second stereo
+//! chunk; this file does the transforms and joins the chunks with crossfades.
 use ort::{session::Session, value::Tensor};
 use realfft::{num_complex::Complex32, RealFftPlanner};
 
+pub const NF: usize = 4096;
 pub const HOP: usize = 1024;
-pub const DIM_F: usize = 2048;
-pub const DIM_T: usize = 512;
+/// Samples in one chunk (11 s), the padding the model expects after it, and the frames that gives.
+pub const CH: usize = 485_100;
+const PAD: usize = 1_300;
+pub const FRAMES: usize = (CH + PAD) / HOP + 1;
+pub const BINS: usize = NF / 2 + 1;
+/// The model's output order.
+pub const SOURCES: [&str; 4] = ["drums", "bass", "other", "vocals"];
 pub const PARTS: [&str; 4] = ["vocals", "bass", "drums", "other"];
+const STEP: usize = CH / 2;
+const FADE: usize = CH / 10;
+const BORDER: usize = CH - STEP;
 
-/// FFT size for each part's model.
-pub fn n_fft(part: &str) -> usize {
-    match part {
-        "vocals" => 6144,
-        "bass" => 16384,
-        "drums" => 4096,
-        _ => 8192,
+pub fn source_index(part: &str) -> Option<usize> {
+    SOURCES.iter().position(|s| *s == part)
+}
+
+/// numpy-style "reflect" padding (the edge sample isn't repeated); zeros when the signal is too short.
+fn reflect_pad(x: &[f32], p: usize) -> Vec<f32> {
+    let n = x.len();
+    let mut out = Vec::with_capacity(n + 2 * p);
+    if n <= p {
+        out.resize(p, 0.0);
+        out.extend_from_slice(x);
+        out.resize(n + 2 * p, 0.0);
+        return out;
     }
+    for i in (1..=p).rev() {
+        out.push(x[i]);
+    }
+    out.extend_from_slice(x);
+    for i in 0..p {
+        out.push(x[n - 2 - i]);
+    }
+    out
 }
 
-fn hann(n: usize) -> Vec<f32> {
-    (0..n).map(|i| (0.5 - 0.5 * (2.0 * std::f64::consts::PI * i as f64 / n as f64).cos()) as f32).collect()
+/// Number of chunks a song of `n` samples is cut into (for progress).
+pub fn chunks(n: usize) -> usize {
+    (n + 2 * BORDER).div_ceil(STEP)
 }
 
-fn reflect(x: &[f32], i: isize) -> f32 {
-    let n = x.len() as isize;
-    let mut j = i;
-    if j < 0 { j = -j; }
-    if j >= n { j = 2 * (n - 1) - j; }
-    x[j.clamp(0, n - 1) as usize]
-}
-
-/// Number of chunks a song of `n` samples is cut into for one part (for progress).
-pub fn chunks(n: usize, part: &str) -> usize {
-    let nf = n_fft(part);
-    let chunk = HOP * (DIM_T - 1);
-    let gen = chunk - nf;
-    let pad = gen - n % gen;
-    (n + pad) / gen
-}
-
-/// Separate one part from a stereo mix at 44.1 kHz. Returns (left, right).
+/// Separates a stereo mix at 44.1 kHz. Returns, for drums, bass, other and vocals, (left, right).
 pub fn separate(
     session: &mut Session,
-    part: &str,
     l: &[f32],
     r: &[f32],
     mut progress: impl FnMut(),
-) -> Result<(Vec<f32>, Vec<f32>), String> {
-    let nf = n_fft(part);
-    let nb = nf / 2 + 1;
-    let chunk = HOP * (DIM_T - 1);
-    let trim = nf / 2;
-    let gen = chunk - 2 * trim;
+) -> Result<Vec<(Vec<f32>, Vec<f32>)>, String> {
     let n = l.len();
-    let pad = gen - n % gen;
-    let total = trim + n + pad + trim;
-    let get = |x: &[f32], i: usize| -> f32 { if i >= trim && i < trim + n { x[i - trim] } else { 0.0 } };
-    let win = hann(nf);
+    let xp = [reflect_pad(l, BORDER), reflect_pad(r, BORDER)];
+    let total = xp[0].len();
+    let mut res = vec![vec![0f32; total]; 8];
+    let mut cnt = vec![0f32; total];
+    let mut w = vec![1f32; CH];
+    for k in 0..FADE {
+        let a = k as f32 / (FADE - 1) as f32;
+        w[k] = a;
+        w[CH - 1 - k] = a;
+    }
     let mut planner = RealFftPlanner::<f32>::new();
-    let fwd = planner.plan_fft_forward(nf);
-    let inv = planner.plan_fft_inverse(nf);
-    let mut out_l = Vec::with_capacity(n + pad);
-    let mut out_r = Vec::with_capacity(n + pad);
+    let fwd = planner.plan_fft_forward(NF);
+    let inv = planner.plan_fft_inverse(NF);
     let mut frame = fwd.make_input_vec();
     let mut spec = fwd.make_output_vec();
     let mut tbuf = inv.make_output_vec();
+    let norm = (NF as f32).sqrt();
+    let len = CH + PAD;
     let mut i = 0;
-    while i < n + pad {
-        // this chunk of the padded mix
-        let cl: Vec<f32> = (0..chunk).map(|k| if i + k < total { get(l, i + k) } else { 0.0 }).collect();
-        let cr: Vec<f32> = (0..chunk).map(|k| if i + k < total { get(r, i + k) } else { 0.0 }).collect();
-        // forward transform: centred frames with reflect padding, like torch.stft(center=True)
-        let mut input = vec![0f32; 4 * DIM_F * DIM_T];
-        for (c, x) in [&cl, &cr].iter().enumerate() {
-            for t in 0..DIM_T {
-                let s = (t * HOP) as isize - trim as isize;
-                for k in 0..nf { frame[k] = reflect(x, s + k as isize) * win[k]; }
-                fwd.process(&mut frame, &mut spec).map_err(|e| e.to_string())?;
-                for f in 0..DIM_F {
-                    input[((2 * c) * DIM_F + f) * DIM_T + t] = spec[f].re;
-                    input[((2 * c + 1) * DIM_F + f) * DIM_T + t] = spec[f].im;
+    while i < total {
+        let ln = CH.min(total - i);
+        let mut input = vec![0f32; 4 * BINS * FRAMES];
+        for c in 0..2 {
+            // the chunk, zero-padded to the model's length, then centre-padded by reflection like torch.stft
+            let mut x = vec![0f32; len];
+            x[..ln].copy_from_slice(&xp[c][i..i + ln]);
+            let xc = reflect_pad(&x, NF / 2);
+            for t in 0..FRAMES {
+                frame.copy_from_slice(&xc[t * HOP..t * HOP + NF]);
+                fwd.process(&mut frame, &mut spec)
+                    .map_err(|e| e.to_string())?;
+                for f in 0..BINS {
+                    input[((2 * c) * BINS + f) * FRAMES + t] = spec[f].re / norm;
+                    input[((2 * c + 1) * BINS + f) * FRAMES + t] = spec[f].im / norm;
                 }
             }
         }
-        let tensor = Tensor::from_array(([1usize, 4, DIM_F, DIM_T], input.into_boxed_slice())).map_err(|e| e.to_string())?;
-        let outputs = session.run(ort::inputs!["input" => tensor]).map_err(|e| e.to_string())?;
-        let (_, y) = outputs["output"].try_extract_tensor::<f32>().map_err(|e| e.to_string())?;
-        // inverse transform with overlap-add
-        let len = nf + HOP * (DIM_T - 1);
-        for c in 0..2 {
-            let mut acc = vec![0f32; len];
-            let mut wsum = vec![0f32; len];
-            for t in 0..DIM_T {
-                for f in 0..nb {
-                    spec[f] = if f < DIM_F {
-                        Complex32::new(y[((2 * c) * DIM_F + f) * DIM_T + t], y[((2 * c + 1) * DIM_F + f) * DIM_T + t])
-                    } else { Complex32::new(0.0, 0.0) };
+        let tensor = Tensor::from_array(([1usize, 4, BINS, FRAMES], input.into_boxed_slice()))
+            .map_err(|e| e.to_string())?;
+        let outputs = session
+            .run(ort::inputs!["spec" => tensor])
+            .map_err(|e| e.to_string())?;
+        let (_, y) = outputs["out"]
+            .try_extract_tensor::<f32>()
+            .map_err(|e| e.to_string())?;
+        let mut ww = w.clone();
+        if i == 0 {
+            ww[..FADE].fill(1.0);
+        }
+        if i + STEP >= total {
+            ww[CH - FADE..].fill(1.0);
+        }
+        for s in 0..4 {
+            for c in 0..2 {
+                let re = (s * 4 + c * 2) * BINS * FRAMES;
+                let im = (s * 4 + c * 2 + 1) * BINS * FRAMES;
+                let mut acc = vec![0f32; (FRAMES - 1) * HOP + NF];
+                let mut num = vec![0f32; acc.len()];
+                for t in 0..FRAMES {
+                    for f in 0..BINS {
+                        spec[f] = Complex32::new(
+                            y[re + f * FRAMES + t] * norm,
+                            y[im + f * FRAMES + t] * norm,
+                        );
+                    }
+                    spec[0].im = 0.0;
+                    spec[BINS - 1].im = 0.0;
+                    inv.process(&mut spec, &mut tbuf)
+                        .map_err(|e| e.to_string())?;
+                    let o = t * HOP;
+                    for k in 0..NF {
+                        acc[o + k] += tbuf[k] / NF as f32;
+                        num[o + k] += 1.0;
+                    }
                 }
-                spec[0].im = 0.0;
-                spec[nb - 1].im = 0.0;
-                inv.process(&mut spec, &mut tbuf).map_err(|e| e.to_string())?;
-                let o = t * HOP;
-                for k in 0..nf {
-                    acc[o + k] += tbuf[k] / nf as f32 * win[k];
-                    wsum[o + k] += win[k] * win[k];
+                let dst = &mut res[s * 2 + c];
+                for k in 0..ln {
+                    let j = k + NF / 2;
+                    dst[i + k] += acc[j] / num[j].max(1e-8) * ww[k];
                 }
             }
-            // drop the centre padding, then the chunk's own edges
-            let dst = if c == 0 { &mut out_l } else { &mut out_r };
-            for k in trim..chunk - trim {
-                let j = k + trim;
-                dst.push(acc[j] / wsum[j].max(1e-8));
-            }
+        }
+        for k in 0..ln {
+            cnt[i + k] += ww[k];
         }
         progress();
-        i += gen;
+        i += STEP;
     }
-    out_l.truncate(n);
-    out_r.truncate(n);
-    Ok((out_l, out_r))
+    let mut out = Vec::with_capacity(4);
+    for s in 0..4 {
+        let get = |c: usize| -> Vec<f32> {
+            (0..n)
+                .map(|k| res[s * 2 + c][BORDER + k] / cnt[BORDER + k].max(1e-8))
+                .collect()
+        };
+        out.push((get(0), get(1)));
+    }
+    Ok(out)
 }
 
 /// Halve the sample rate (44.1 kHz to 22.05 kHz) with a small smoothing filter.
@@ -128,7 +162,11 @@ pub fn half(x: &[f32]) -> Vec<f32> {
     (0..n)
         .map(|i| {
             let a = if 2 * i > 0 { x[2 * i - 1] } else { x[0] };
-            let c = if 2 * i + 1 < x.len() { x[2 * i + 1] } else { x[2 * i] };
+            let c = if 2 * i + 1 < x.len() {
+                x[2 * i + 1]
+            } else {
+                x[2 * i]
+            };
             0.25 * a + 0.5 * x[2 * i] + 0.25 * c
         })
         .collect()

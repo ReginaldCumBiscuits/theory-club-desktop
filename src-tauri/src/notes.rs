@@ -16,7 +16,9 @@ const FRAMES: usize = 172; // frames out of one window
 pub const KEYS: usize = 88;
 
 pub fn session() -> Result<Session, String> {
-    let threads = std::thread::available_parallelism().map(|x| x.get()).unwrap_or(4);
+    let threads = std::thread::available_parallelism()
+        .map(|x| x.get())
+        .unwrap_or(4);
     Session::builder()
         .map_err(|e| e.to_string())?
         .with_intra_threads(threads)
@@ -31,14 +33,21 @@ pub fn frames_for(n: usize) -> usize {
 }
 
 /// Note and onset activations for mono audio at 22,050 Hz: two arrays of frames × 88.
-pub fn infer(s: &mut Session, x: &[f32], mut on_window: impl FnMut(usize, usize)) -> Result<(Vec<f32>, Vec<f32>), String> {
+pub fn infer(
+    s: &mut Session,
+    x: &[f32],
+    mut on_window: impl FnMut(usize, usize),
+) -> Result<(Vec<f32>, Vec<f32>), String> {
     let mut a = vec![0f32; OL / 2];
     a.extend_from_slice(x);
     let starts: Vec<usize> = (0..a.len()).step_by(HOP).collect();
     let total = starts.len();
     let half = OVERLAP_FRAMES / 2;
     let keep = FRAMES - OVERLAP_FRAMES;
-    let (mut note, mut onset) = (Vec::with_capacity(total * keep * KEYS), Vec::with_capacity(total * keep * KEYS));
+    let (mut note, mut onset) = (
+        Vec::with_capacity(total * keep * KEYS),
+        Vec::with_capacity(total * keep * KEYS),
+    );
     const BATCH: usize = 8;
     for (bi, group) in starts.chunks(BATCH).enumerate() {
         let b = group.len();
@@ -47,10 +56,17 @@ pub fn infer(s: &mut Session, x: &[f32], mut on_window: impl FnMut(usize, usize)
             let end = (st + NS).min(a.len());
             buf[k * NS..k * NS + (end - st)].copy_from_slice(&a[st..end]);
         }
-        let t = Tensor::from_array(([b, NS, 1], buf.into_boxed_slice())).map_err(|e| e.to_string())?;
-        let out = s.run(ort::inputs!["serving_default_input_2:0" => t]).map_err(|e| e.to_string())?;
-        let (_, nv) = out["StatefulPartitionedCall:1"].try_extract_tensor::<f32>().map_err(|e| e.to_string())?;
-        let (_, ov) = out["StatefulPartitionedCall:2"].try_extract_tensor::<f32>().map_err(|e| e.to_string())?;
+        let t =
+            Tensor::from_array(([b, NS, 1], buf.into_boxed_slice())).map_err(|e| e.to_string())?;
+        let out = s
+            .run(ort::inputs!["serving_default_input_2:0" => t])
+            .map_err(|e| e.to_string())?;
+        let (_, nv) = out["StatefulPartitionedCall:1"]
+            .try_extract_tensor::<f32>()
+            .map_err(|e| e.to_string())?;
+        let (_, ov) = out["StatefulPartitionedCall:2"]
+            .try_extract_tensor::<f32>()
+            .map_err(|e| e.to_string())?;
         for k in 0..b {
             let base = k * FRAMES * KEYS;
             note.extend_from_slice(&nv[base + half * KEYS..base + (half + keep) * KEYS]);

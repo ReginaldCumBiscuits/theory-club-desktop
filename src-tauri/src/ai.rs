@@ -12,14 +12,31 @@ use std::sync::OnceLock;
 use tauri::ipc::{InvokeBody, Request, Response};
 use tauri::{AppHandle, Emitter, Manager, State};
 
-const BASE: &str = "https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/";
-const MODEL_BYTES: u64 = 29_703_204;
-const MODELS: [(&str, &str); 4] = [
-    ("vocals", "daba83c2ee1afee9139766ad64c9b6808d6b6f092fff04bed3338be50baac721"),
-    ("bass", "0c3e77b9963185b1ea6bb46a4b8924137d9370fc1ccdefec7b1b416ef550dcaa"),
-    ("drums", "40f586b7091934dd6f5563f0cba8f14bad57ce88440da1098bf388ea716c2901"),
-    ("other", "7b67a1dcb5f232153528c59960b4c7bf8dc736b8114de360af0e719633f53358"),
+/// SCNet (small), exported to ONNX for this app and published with its releases. One model gives all four parts.
+const BASE: &str =
+    "https://github.com/ReginaldCumBiscuits/theory-club-desktop/releases/download/ai-models-1/";
+const MODEL_FILE: &str = "scnet_small.onnx";
+const MODEL_BYTES: u64 = 48_175_620;
+const MODEL_SHA: &str = "7f05258241fdeadb506f49f793501128ea3b5d0f4104bf7117973f48040241ca";
+/// The four MDX-Net models earlier versions downloaded; removed once the new one is in.
+const OLD_MODELS: [&str; 4] = [
+    "kuielab_a_vocals.onnx",
+    "kuielab_a_bass.onnx",
+    "kuielab_a_drums.onnx",
+    "kuielab_a_other.onnx",
 ];
+
+/// The last song separated, so asking for another part of it is instant: (fingerprint, the four parts).
+type Stems = Vec<(Vec<f32>, Vec<f32>)>;
+static LAST: std::sync::Mutex<Option<(u64, Stems)>> = std::sync::Mutex::new(None);
+
+fn fingerprint(x: &[f32]) -> u64 {
+    let mut h: u64 = 0xcbf29ce484222325 ^ x.len() as u64;
+    for v in x.iter().step_by(97) {
+        h = (h ^ v.to_bits() as u64).wrapping_mul(0x100000001b3);
+    }
+    h
+}
 
 /// Only one download or separation at a time.
 #[derive(Default)]
@@ -41,11 +58,15 @@ impl Drop for Busy<'_> {
 }
 
 fn model_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    Ok(app.path().app_data_dir().map_err(|e| e.to_string())?.join("ai-separator"))
+    Ok(app
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?
+        .join("ai-separator"))
 }
 
-fn model_path(app: &AppHandle, part: &str) -> Result<PathBuf, String> {
-    Ok(model_dir(app)?.join(format!("kuielab_a_{part}.onnx")))
+fn model_path(app: &AppHandle) -> Result<PathBuf, String> {
+    Ok(model_dir(app)?.join(MODEL_FILE))
 }
 
 fn lib_name() -> &'static str {
@@ -73,7 +94,11 @@ static ORT: OnceLock<Result<(), String>> = OnceLock::new();
 #[cfg(target_os = "windows")]
 fn add_dll_dir(dir: &std::path::Path) {
     use std::os::windows::ffi::OsStrExt;
-    let w: Vec<u16> = dir.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
+    let w: Vec<u16> = dir
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
     unsafe {
         windows_sys::Win32::System::LibraryLoader::SetDllDirectoryW(w.as_ptr());
     }
@@ -81,17 +106,32 @@ fn add_dll_dir(dir: &std::path::Path) {
 
 /// A model session, on the graphics card when asked and available (DirectML on Windows, Core ML on
 /// macOS), otherwise on the processor.
-pub fn build_session(path: &std::path::Path, gpu: bool, cache: Option<&std::path::Path>) -> Result<ort::session::Session, String> {
-    let threads = std::thread::available_parallelism().map(|x| x.get()).unwrap_or(4);
+pub fn build_session(
+    path: &std::path::Path,
+    gpu: bool,
+    cache: Option<&std::path::Path>,
+) -> Result<ort::session::Session, String> {
+    let threads = std::thread::available_parallelism()
+        .map(|x| x.get())
+        .unwrap_or(4);
     #[allow(unused_mut)]
-    let mut b = ort::session::Session::builder().map_err(|e| e.to_string())?.with_intra_threads(threads).map_err(|e| e.to_string())?;
+    let mut b = ort::session::Session::builder()
+        .map_err(|e| e.to_string())?
+        .with_intra_threads(threads)
+        .map_err(|e| e.to_string())?;
     if gpu {
         #[cfg(target_os = "windows")]
         {
             b = b
                 .with_memory_pattern(false)
                 .and_then(|b| b.with_parallel_execution(false))
-                .and_then(|b| b.with_execution_providers([ort::execution_providers::DirectMLExecutionProvider::default().build().error_on_failure()]))
+                .and_then(|b| {
+                    b.with_execution_providers([
+                        ort::execution_providers::DirectMLExecutionProvider::default()
+                            .build()
+                            .error_on_failure(),
+                    ])
+                })
                 .map_err(|e| e.to_string())?;
         }
         #[cfg(target_os = "macos")]
@@ -100,7 +140,9 @@ pub fn build_session(path: &std::path::Path, gpu: bool, cache: Option<&std::path
             if let Some(c) = cache {
                 ep = ep.with_model_cache_dir(c.to_string_lossy());
             }
-            b = b.with_execution_providers([ep.build().error_on_failure()]).map_err(|e| e.to_string())?;
+            b = b
+                .with_execution_providers([ep.build().error_on_failure()])
+                .map_err(|e| e.to_string())?;
         }
         #[cfg(not(any(target_os = "windows", target_os = "macos")))]
         {
@@ -127,9 +169,11 @@ fn ort_init(app: &AppHandle) -> Result<(), String> {
 }
 
 fn installed(app: &AppHandle) -> bool {
-    MODELS.iter().all(|(p, _)| {
-        model_path(app, p).ok().and_then(|f| std::fs::metadata(f).ok()).map(|m| m.len() == MODEL_BYTES).unwrap_or(false)
-    })
+    model_path(app)
+        .ok()
+        .and_then(|f| std::fs::metadata(f).ok())
+        .map(|m| m.len() == MODEL_BYTES)
+        .unwrap_or(false)
 }
 
 #[derive(serde::Serialize)]
@@ -138,6 +182,8 @@ pub struct AiStatus {
     installed: bool,
     download_mb: u32,
     busy: bool,
+    /// The previous separator's models are still on disk (shown as an upgrade).
+    old: bool,
 }
 
 /// Whether AI separation can run: the runtime is in this build and the models are downloaded.
@@ -146,30 +192,35 @@ pub fn ai_status(app: AppHandle, ai: State<'_, Ai>) -> AiStatus {
     AiStatus {
         runtime: runtime_path(&app).is_some(),
         installed: installed(&app),
-        download_mb: ((MODEL_BYTES * MODELS.len() as u64) / 1_000_000) as u32,
+        download_mb: (MODEL_BYTES / 1_000_000) as u32,
         busy: ai.0.load(Ordering::SeqCst),
+        old: model_dir(&app)
+            .map(|d| OLD_MODELS.iter().any(|f| d.join(f).exists()))
+            .unwrap_or(false),
     }
 }
 
 fn progress(app: &AppHandle, stage: &str, p: f32) {
-    let _ = app.emit("ai-progress", serde_json::json!({ "stage": stage, "p": p.clamp(0.0, 1.0) }));
+    let _ = app.emit(
+        "ai-progress",
+        serde_json::json!({ "stage": stage, "p": p.clamp(0.0, 1.0) }),
+    );
 }
 
 fn download(app: &AppHandle) -> Result<(), String> {
     let dir = model_dir(app)?;
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    let total = MODEL_BYTES * MODELS.len() as u64;
-    let mut done = 0u64;
-    for (part, hash) in MODELS {
-        let dest = model_path(app, part)?;
-        if std::fs::metadata(&dest).map(|m| m.len() == MODEL_BYTES).unwrap_or(false) {
-            done += MODEL_BYTES;
-            continue;
-        }
+    let dest = model_path(app)?;
+    if !std::fs::metadata(&dest)
+        .map(|m| m.len() == MODEL_BYTES)
+        .unwrap_or(false)
+    {
         // TC_AI_BASE points the download somewhere else, for testing
         let base = std::env::var("TC_AI_BASE").unwrap_or_else(|_| BASE.to_string());
-        let url = format!("{base}kuielab_a_{part}.onnx");
-        let resp = ureq::get(&url).call().map_err(|e| format!("Couldn't download the {part} model: {e}"))?;
+        let url = format!("{base}{MODEL_FILE}");
+        let resp = ureq::get(&url)
+            .call()
+            .map_err(|e| format!("Couldn't download the AI separator: {e}"))?;
         let mut rd = resp.into_reader();
         let tmp = dest.with_extension("part");
         let mut f = std::fs::File::create(&tmp).map_err(|e| e.to_string())?;
@@ -178,7 +229,9 @@ fn download(app: &AppHandle) -> Result<(), String> {
         let mut got = 0u64;
         let mut last = 0u64;
         loop {
-            let k = rd.read(&mut buf).map_err(|e| format!("The download was interrupted: {e}"))?;
+            let k = rd
+                .read(&mut buf)
+                .map_err(|e| format!("The download was interrupted: {e}"))?;
             if k == 0 {
                 break;
             }
@@ -187,17 +240,19 @@ fn download(app: &AppHandle) -> Result<(), String> {
             got += k as u64;
             if got - last > 1 << 20 {
                 last = got;
-                progress(app, "download", (done + got) as f32 / total as f32);
+                progress(app, "download", got as f32 / MODEL_BYTES as f32);
             }
         }
         drop(f);
         let hex: String = h.finalize().iter().map(|b| format!("{b:02x}")).collect();
-        if got != MODEL_BYTES || hex != hash {
+        if got != MODEL_BYTES || hex != MODEL_SHA {
             let _ = std::fs::remove_file(&tmp);
-            return Err(format!("The {part} model didn't download correctly. Try again."));
+            return Err("The AI separator didn't download correctly. Try again.".into());
         }
         std::fs::rename(&tmp, &dest).map_err(|e| e.to_string())?;
-        done += MODEL_BYTES;
+    }
+    for old in OLD_MODELS {
+        let _ = std::fs::remove_file(dir.join(old));
     }
     progress(app, "download", 1.0);
     Ok(())
@@ -219,6 +274,9 @@ pub async fn ai_install(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 pub fn ai_remove(app: AppHandle, ai: State<'_, Ai>) -> Result<(), String> {
     let _b = Busy::take(&ai.0)?;
+    if let Ok(mut g) = LAST.lock() {
+        *g = None;
+    }
     let d = model_dir(&app)?;
     if d.exists() {
         std::fs::remove_dir_all(d).map_err(|e| e.to_string())?;
@@ -232,7 +290,12 @@ pub fn ai_remove(app: AppHandle, ai: State<'_, Ai>) -> Result<(), String> {
 /// Returns the part at 22.05 kHz in the same layout.
 #[tauri::command]
 pub async fn ai_separate(app: AppHandle, request: Request<'_>) -> Result<Response, String> {
-    let part = request.headers().get("x-part").and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
+    let part = request
+        .headers()
+        .get("x-part")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+        .to_string();
     let want_gpu = request.headers().get("x-gpu").and_then(|v| v.to_str().ok()) == Some("1");
     if !sepcore::PARTS.contains(&part.as_str()) {
         return Err("Unknown part".into());
@@ -240,7 +303,10 @@ pub async fn ai_separate(app: AppHandle, request: Request<'_>) -> Result<Respons
     let InvokeBody::Raw(bytes) = request.body() else {
         return Err("No audio was sent".into());
     };
-    let data: Vec<f32> = bytes.chunks_exact(4).map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]])).collect();
+    let data: Vec<f32> = bytes
+        .chunks_exact(4)
+        .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+        .collect();
     tauri::async_runtime::spawn_blocking(move || {
         let ai = app.state::<Ai>();
         let _b = Busy::take(&ai.0)?;
@@ -253,38 +319,66 @@ pub async fn ai_separate(app: AppHandle, request: Request<'_>) -> Result<Respons
             return Err("The song is too short.".into());
         }
         let (l, r) = data.split_at(n);
-        let mp = model_path(&app, &part)?;
-        let cache = model_dir(&app)?.join("gpu-cache");
-        let _ = std::fs::create_dir_all(&cache);
-        let total = sepcore::chunks(n, &part).max(1);
-        let run = |gpu: bool| -> Result<(Vec<f32>, Vec<f32>), String> {
-            let mut s = build_session(&mp, gpu, Some(&cache))?;
-            let mut k = 0;
-            progress(&app, "separate", 0.0);
-            let out = sepcore::separate(&mut s, &part, l, r, || {
-                k += 1;
-                progress(&app, "separate", k as f32 / total as f32);
-            })?;
-            if out.0.iter().take(44_100 * 4).any(|v| !v.is_finite()) {
-                return Err("the graphics card gave unusable results".into());
-            }
-            Ok(out)
-        };
-        // the graphics card first when it's on; the processor if that doesn't work
-        let (sl, sr) = if want_gpu {
-            match run(true) {
-                Ok(x) => {
-                    let _ = app.emit("ai-progress", serde_json::json!({ "stage": "device", "gpu": true }));
-                    x
-                }
-                Err(e) => {
-                    eprintln!("AI separation on the graphics card failed, using the processor: {e}");
-                    let _ = app.emit("ai-progress", serde_json::json!({ "stage": "device", "gpu": false }));
-                    run(false).map_err(|e| format!("The AI model couldn't run: {e}"))?
-                }
-            }
+        let idx = sepcore::source_index(&part).ok_or("Unknown part")?;
+        let key = fingerprint(&data);
+        let cached = LAST.lock().ok().and_then(|g| {
+            g.as_ref()
+                .filter(|(k, _)| *k == key)
+                .map(|(_, st)| st[idx].clone())
+        });
+        let (sl, sr) = if let Some(x) = cached {
+            progress(&app, "separate", 1.0);
+            x
         } else {
-            run(false).map_err(|e| format!("The AI model couldn't run: {e}"))?
+            let mp = model_path(&app)?;
+            let cache = model_dir(&app)?.join("gpu-cache");
+            let _ = std::fs::create_dir_all(&cache);
+            let total = sepcore::chunks(n).max(1);
+            let run = |gpu: bool| -> Result<Stems, String> {
+                let mut s = build_session(&mp, gpu, Some(&cache))?;
+                let mut k = 0;
+                progress(&app, "separate", 0.0);
+                let out = sepcore::separate(&mut s, l, r, || {
+                    k += 1;
+                    progress(&app, "separate", k as f32 / total as f32);
+                })?;
+                if out
+                    .iter()
+                    .any(|(a, _)| a.iter().take(44_100 * 4).any(|v| !v.is_finite()))
+                {
+                    return Err("the graphics card gave unusable results".into());
+                }
+                Ok(out)
+            };
+            // the graphics card first when it's on; the processor if that doesn't work
+            let stems = if want_gpu {
+                match run(true) {
+                    Ok(x) => {
+                        let _ = app.emit(
+                            "ai-progress",
+                            serde_json::json!({ "stage": "device", "gpu": true }),
+                        );
+                        x
+                    }
+                    Err(e) => {
+                        eprintln!(
+                            "AI separation on the graphics card failed, using the processor: {e}"
+                        );
+                        let _ = app.emit(
+                            "ai-progress",
+                            serde_json::json!({ "stage": "device", "gpu": false }),
+                        );
+                        run(false).map_err(|e| format!("The AI model couldn't run: {e}"))?
+                    }
+                }
+            } else {
+                run(false).map_err(|e| format!("The AI model couldn't run: {e}"))?
+            };
+            let one = stems[idx].clone();
+            if let Ok(mut g) = LAST.lock() {
+                *g = Some((key, stems));
+            }
+            one
         };
         let (hl, hr) = (sepcore::half(&sl), sepcore::half(&sr));
         let mut out = Vec::with_capacity((hl.len() + hr.len()) * 4);
@@ -297,7 +391,6 @@ pub async fn ai_separate(app: AppHandle, request: Request<'_>) -> Result<Respons
     .map_err(|e| e.to_string())?
 }
 
-
 /// Finds the notes in a separated part with the built-in note model. Only needs ONNX Runtime, not the
 /// separation download. Takes mono audio at 22,050 Hz; returns the note activations then the onset activations.
 #[tauri::command]
@@ -305,11 +398,17 @@ pub async fn ai_notes(app: AppHandle, request: Request<'_>) -> Result<Response, 
     let InvokeBody::Raw(bytes) = request.body() else {
         return Err("No audio was sent".into());
     };
-    let x: Vec<f32> = bytes.chunks_exact(4).map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]])).collect();
+    let x: Vec<f32> = bytes
+        .chunks_exact(4)
+        .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+        .collect();
     tauri::async_runtime::spawn_blocking(move || {
         ort_init(&app)?;
         let mut s = notes::session().map_err(|e| format!("The note model couldn't start: {e}"))?;
-        let (n, o) = notes::infer(&mut s, &x, |k, t| progress(&app, "notes", k as f32 / t as f32)).map_err(|e| format!("The note model couldn't run: {e}"))?;
+        let (n, o) = notes::infer(&mut s, &x, |k, t| {
+            progress(&app, "notes", k as f32 / t as f32)
+        })
+        .map_err(|e| format!("The note model couldn't run: {e}"))?;
         let mut out = Vec::with_capacity((n.len() + o.len()) * 4);
         for v in n.iter().chain(o.iter()) {
             out.extend_from_slice(&v.to_le_bytes());
@@ -334,7 +433,9 @@ mod tests {
         if let Some(d) = std::path::Path::new(&lib).parent() {
             super::add_dll_dir(d);
         }
-        ort::init_from(lib).commit().expect("ONNX Runtime should load");
+        ort::init_from(lib)
+            .commit()
+            .expect("ONNX Runtime should load");
         let model = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests/tiny.onnx");
         for gpu in [true, false] {
             let mut s = match super::build_session(&model, gpu, None) {
@@ -345,11 +446,26 @@ mod tests {
                 }
                 Err(e) => panic!("processor session failed: {e}"),
             };
-            let x = ort::value::Tensor::from_array(([1usize, 4, 8, 8], vec![1f32; 256].into_boxed_slice())).unwrap();
+            let x = ort::value::Tensor::from_array((
+                [1usize, 4, 8, 8],
+                vec![1f32; 256].into_boxed_slice(),
+            ))
+            .unwrap();
             let out = s.run(ort::inputs!["input" => x]).unwrap();
             let (_, y) = out["output"].try_extract_tensor::<f32>().unwrap();
-            assert!((y[0] - 2.0).abs() < 1e-4, "wrong result {} (gpu {gpu})", y[0]);
-            eprintln!("ok on {}", if gpu { "the graphics card" } else { "the processor" });
+            assert!(
+                (y[0] - 2.0).abs() < 1e-4,
+                "wrong result {} (gpu {gpu})",
+                y[0]
+            );
+            eprintln!(
+                "ok on {}",
+                if gpu {
+                    "the graphics card"
+                } else {
+                    "the processor"
+                }
+            );
         }
     }
 
@@ -366,10 +482,13 @@ mod tests {
         }
         let _ = ort::init_from(lib).commit();
         let sr = crate::notes::SR as f32;
-        let x: Vec<f32> = (0..(crate::notes::SR * 5)).map(|i| {
-            let t = i as f32 / sr;
-            0.3 * ((2.0 * std::f32::consts::PI * 220.0 * t).sin() + 0.5 * (2.0 * std::f32::consts::PI * 440.0 * t).sin())
-        }).collect();
+        let x: Vec<f32> = (0..(crate::notes::SR * 5))
+            .map(|i| {
+                let t = i as f32 / sr;
+                0.3 * ((2.0 * std::f32::consts::PI * 220.0 * t).sin()
+                    + 0.5 * (2.0 * std::f32::consts::PI * 440.0 * t).sin())
+            })
+            .collect();
         let mut s = crate::notes::session().expect("note model should load");
         let (n, o) = crate::notes::infer(&mut s, &x, |_, _| {}).expect("note model should run");
         let k = crate::notes::KEYS;
@@ -377,8 +496,49 @@ mod tests {
         assert_eq!(n.len() / k, crate::notes::frames_for(x.len()));
         let mid = (n.len() / k) / 2;
         let row = &n[mid * k..(mid + 1) * k];
-        let best = row.iter().enumerate().max_by(|a, b| a.1.partial_cmp(b.1).unwrap()).unwrap().0;
+        let best = row
+            .iter()
+            .enumerate()
+            .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+            .unwrap()
+            .0;
         assert_eq!(best + 21, 57, "expected A3, got key {}", best + 21);
         eprintln!("note model ok: A3 at {:.2}", row[best]);
+    }
+
+    /// Local check of the separator against the reference implementation: TC_SCNET is the model,
+    /// TC_MIX a stereo mix as raw floats (left then right); the parts are written next to it.
+    #[test]
+    fn scnet_separates() {
+        let (Ok(lib), Ok(model), Ok(mix)) = (
+            std::env::var("TC_ORT"),
+            std::env::var("TC_SCNET"),
+            std::env::var("TC_MIX"),
+        ) else {
+            eprintln!("TC_ORT, TC_SCNET or TC_MIX not set: skipped");
+            return;
+        };
+        let _ = ort::init_from(lib).commit();
+        let b = std::fs::read(&mix).unwrap();
+        let x: Vec<f32> = b
+            .chunks_exact(4)
+            .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+            .collect();
+        let (l, r) = x.split_at(x.len() / 2);
+        let mut s = super::build_session(std::path::Path::new(&model), false, None).unwrap();
+        let t = std::time::Instant::now();
+        let out = crate::sepcore::separate(&mut s, l, r, || {}).unwrap();
+        eprintln!(
+            "separated {:.1}s of audio in {:.1}s",
+            l.len() as f32 / 44100.0,
+            t.elapsed().as_secs_f32()
+        );
+        for (i, name) in crate::sepcore::SOURCES.iter().enumerate() {
+            let mut o = Vec::new();
+            for v in out[i].0.iter().chain(out[i].1.iter()) {
+                o.extend_from_slice(&v.to_le_bytes());
+            }
+            std::fs::write(format!("{mix}.{name}"), o).unwrap();
+        }
     }
 }
