@@ -47,7 +47,13 @@ async function bpDeskInfer(x,onP){const un=await aiListen(p=>{if(p.stage==='note
   const f=new Float32Array(ab instanceof ArrayBuffer?ab:new Uint8Array(ab).buffer);const h=f.length/2;return{note:f.subarray(0,h),onset:f.subarray(h),nf:h/88}}finally{un()}}
 /* can this copy of the app run the note model? */
 async function bpCan(){if(store.get('noteModel',true)===false)return null;if(TAU){if(!AISEP.st)await aiStatus();if(AISEP.st&&AISEP.st.runtime)return'desk';if(!DROID)return null}return typeof WebAssembly==='object'?'web':null}
-async function bpLine(x,part,onP){const how=await bpCan();if(!how)return null;const P=how==='desk'?await bpDeskInfer(x,onP):await bpWebInfer(x,onP);
+/* even out the level first: the model's confidence follows loudness, so quiet passages lost their notes */
+function bpLevel(x,sr=22050,target=.1,maxg=8){const w=sr>>1,n=Math.floor(x.length/w);if(n<2)return x;const r=new Float32Array(n);let mx=0;
+ for(let k=0;k<n;k++){let s=0;for(let i=k*w;i<(k+1)*w;i++)s+=x[i]*x[i];r[k]=Math.sqrt(s/w)+1e-7;if(r[k]>mx)mx=r[k]}
+ const m=new Float32Array(n),env=new Float32Array(n),g=new Float32Array(n);for(let k=0;k<n;k++){let v=0;for(let j=Math.max(0,k-2);j<=Math.min(n-1,k+2);j++)v=Math.max(v,r[j]);m[k]=v}
+ for(let k=0;k<n;k++){let s=0,c=0;for(let j=Math.max(0,k-2);j<=Math.min(n-1,k+2);j++){s+=m[j];c++}env[k]=s/c;g[k]=r[k]<mx*1e-3?1:Math.min(maxg,target/env[k])}
+ const y=new Float32Array(x.length);for(let i=0;i<x.length;i++){const u=i/w-.5,k=Math.max(0,Math.min(n-1,Math.floor(u))),k2=Math.min(n-1,k+1),f=Math.max(0,Math.min(1,u-k));y[i]=Math.max(-1,Math.min(1,x[i]*(g[k]*(1-f)+g[k2]*f)))}return y}
+async function bpLine(x,part,onP){const how=await bpCan();if(!how)return null;if(part==='bass')x=bpLevel(x);const P=how==='desk'?await bpDeskInfer(x,onP):await bpWebInfer(x,onP);
  return part==='bass'?bpMono(P.note,P.onset,P.nf,[23,67],{minF:6,oct:1}):bpMono(P.note,P.onset,P.nf,[43,88],{minF:4})}
 /* in the transcriber: the bass always, the vocals when they came from the AI separator (on the standard
    separator's vocal part the model also picks up the instruments that leak through) */
@@ -57,8 +63,8 @@ async function bpLine(x,part,onP){const how=await bpCan();if(!how)return null;co
     if(x){const notes=await bpLine(x,part,p=>{rs.textContent=`Finding the ${part==='bass'?'bass notes':'sung notes'} with the note model… ${Math.round(p*100)}%`;bar.style.width=Math.round(92+p*8)+'%'});
      if(notes&&notes.length>=3){d.notes=notes;TS.noteModel=part}}}catch(err){console.warn('note model:',err)}om({data:d})}}
  TS.aiUsed=null;return _tp(W,rs,bar,b)}}
-Object.assign(window,{bpMono,bpTime,bpLine,bpCan,ortLoad,bpWebInfer});
+Object.assign(window,{bpMono,bpTime,bpLine,bpCan,ortLoad,bpWebInfer,bpLevel});
 /* say how the notes were found, next to the "Fix a wrong note" box */
-{const _fp=tsFixPanel;tsFixPanel=function(){_fp();const d=document.getElementById('tsfix');if(!d||!TS.res)return;let n=document.getElementById('tsnm');const on=TS.noteModel&&TS.res.part===TS.noteModel;
+{const _fp=tsFixPanel;tsFixPanel=function(){_fp();const d=document.getElementById('tsfix');if(!d||!TS.res||TS.noteModel==='other')return;let n=document.getElementById('tsnm');const on=TS.noteModel&&TS.res.part===TS.noteModel;
  if(!on){if(n)n.remove();return}if(!n){d.insertAdjacentHTML('beforebegin','<p class="hint" id="tsnm"></p>');n=document.getElementById('tsnm')}
  const t=`The ${TS.noteModel==='bass'?'bass':'sung'} notes were found with a trained note model (Basic Pitch). If one is still wrong, fix it below.`;if(n.textContent!==t)n.textContent=t}}
